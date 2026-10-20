@@ -3,7 +3,7 @@ name: BlackZig customer-base validation
 on:
   push:
     branches:
-      - feature/cliente-ewetisocial-intervalo-0-a-5min
+      - feature/cliente-ewetisocial-intervalo-0-a-5min-pronto
   workflow_dispatch:
 
 permissions:
