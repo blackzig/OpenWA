@@ -822,6 +822,7 @@
     "bulkRecipientsCount": "Empfänger: {{count}}",
     "bulkDelay": "Verzögerung zwischen Nachrichten (ms)",
     "bulkDelayHint": "1000–60000 ms (Standard: 3000)",
+    "bulkFullRange": "Zufällige Pause von 0 bis zum obigen Grenzwert (maximal 5 Minuten)",
     "bulkMediaKind": "Senden als",
     "bulkMediaHint": "Mit Anhang wird die Nachricht zu dessen Bildunterschrift. Eine ausgewählte Datei wird direkt in der Anfrage mitgesendet, daher brauchen große Dateien für viele Empfänger stattdessen eine öffentliche Medien-URL.",
     "bulkMediaTooLarge": "Diese Datei ist zu groß, um sie direkt an {{count}} Empfänger zu senden: Bei dieser Anzahl darf eine Datei höchstens {{size}} groß sein. Verwende stattdessen eine öffentliche Medien-URL oder sende an weniger Empfänger.",

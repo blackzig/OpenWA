@@ -828,6 +828,7 @@
     "bulkRecipientsCount": "Destinatari: {{count}}",
     "bulkDelay": "Ritardo tra i messaggi (ms)",
     "bulkDelayHint": "1000–60000 ms (predefinito: 3000)",
+    "bulkFullRange": "Intervallo casuale da 0 al limite sopra indicato (massimo 5 minuti)",
     "bulkMediaKind": "Invia come",
     "bulkMediaHint": "Con un allegato, il messaggio diventa la sua didascalia. Un file selezionato viaggia dentro la richiesta, quindi i file grandi per molti destinatari richiedono invece un URL multimediale pubblico.",
     "bulkMediaTooLarge": "Questo file è troppo grande per inviarlo direttamente a {{count}} destinatari: con questo numero ogni file può essere al massimo di {{size}}. Usa invece un URL multimediale pubblico o invia a meno destinatari.",

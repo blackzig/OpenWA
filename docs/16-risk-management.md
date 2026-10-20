@@ -110,11 +110,19 @@ flowchart TB
 ```typescript
 // src/modules/message/bulk-message.service.ts — bulk-send pacing defaults
 const options = {
-  delayBetweenMessages: dto.options?.delayBetweenMessages ?? 3000, // 3s (DTO range 1000–60000)
-  randomizeDelay: dto.options?.randomizeDelay ?? true, // adds 0–2s jitter per message
+  delayBetweenMessages: dto.options?.delayBetweenMessages ?? (dto.options?.randomizeFullRange ? 300000 : 3000), // 3s normally, 300s in full-range mode
+  randomizeDelay: dto.options?.randomizeDelay ?? true, // adds 0–2s jitter per message unless full-range mode
+  randomizeFullRange: dto.options?.randomizeFullRange ?? false, // opt-in uniform 0..delayBetweenMessages; overrides jitter
   stopOnError: dto.options?.stopOnError ?? false,
 };
 ```
+
+With `randomizeFullRange: true`, bulk sends choose each wait uniformly from 0 to the configured
+`delayBetweenMessages` ceiling (inclusive), or 300000 ms (5 min) when omitted.
+The configured ceiling must be 1000..300000 ms, but a sampled delay may be zero.
+This option affects only messages within one batch; it is not a global per-session
+sending rate limit and does not remove the risk of WhatsApp account restrictions.
+The legacy `randomizeDelay` option retains its existing behaviour otherwise.
 
 Alongside that:
 

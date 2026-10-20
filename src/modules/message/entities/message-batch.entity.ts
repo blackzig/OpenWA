@@ -65,6 +65,7 @@ export class MessageBatch {
   options!: {
     delayBetweenMessages: number;
     randomizeDelay: boolean;
+    randomizeFullRange?: boolean;
     stopOnError: boolean;
   };
 
