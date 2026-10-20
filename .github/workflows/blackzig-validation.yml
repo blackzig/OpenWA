@@ -24,6 +24,10 @@ jobs:
         run: npm ci
       - name: Delay unit tests
         run: npm test -- --runInBand src/modules/message/bulk-message-delay.spec.ts
+      - name: Full API unit test suite
+        run: npm test -- --runInBand
+      - name: Check source and docs formatting
+        run: npm run format:check
       - name: Typecheck API and test files
         run: npx tsc --noEmit -p tsconfig.json
       - name: Build API
@@ -46,5 +50,9 @@ jobs:
         run: cd dashboard && npm ci
       - name: Check translations
         run: cd dashboard && npm run i18n:check
+      - name: Dashboard unit tests
+        run: cd dashboard && npm run test
+      - name: Check dashboard formatting
+        run: cd dashboard && npm run format:check
       - name: Build dashboard
         run: cd dashboard && npm run build
