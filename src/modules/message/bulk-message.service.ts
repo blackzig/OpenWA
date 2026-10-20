@@ -23,6 +23,7 @@ import {
   BatchMessageResult,
 } from './entities/message-batch.entity';
 import { SendBulkMessageDto } from './dto/bulk-message.dto';
+import { calculateBulkDelay } from './bulk-message-delay';
 import { isMediaUrl } from '../../common/media/media-url';
 import { MessageStatus } from './entities/message.entity';
 import { EngineRegistry } from '../../engine/engine-registry.service';
@@ -323,8 +324,9 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
       );
     }
     const options = {
-      delayBetweenMessages: dto.options?.delayBetweenMessages ?? 3000,
+      delayBetweenMessages: dto.options?.delayBetweenMessages ?? (dto.options?.randomizeFullRange ? 300000 : 3000),
       randomizeDelay: dto.options?.randomizeDelay ?? true,
+      randomizeFullRange: dto.options?.randomizeFullRange ?? false,
       stopOnError: dto.options?.stopOnError ?? false,
     };
 
@@ -1041,11 +1043,7 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     }
   }
 
-  private calculateDelay(options: { delayBetweenMessages: number; randomizeDelay: boolean }): number {
-    let delay = options.delayBetweenMessages;
-    if (options.randomizeDelay) {
-      delay += Math.random() * 2000; // Add 0-2 seconds random
-    }
-    return delay;
+  private calculateDelay(options: MessageBatch['options']): number {
+    return calculateBulkDelay(options);
   }
 }
