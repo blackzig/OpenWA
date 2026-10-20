@@ -822,6 +822,7 @@
     "bulkRecipientsCount": "Penerima: {{count}}",
     "bulkDelay": "Jeda Antar Pesan (ms)",
     "bulkDelayHint": "1000–60000 ms (bawaan 3000)",
+    "bulkFullRange": "Jeda acak dari 0 hingga batas di atas (maksimal 5 menit)",
     "bulkMediaKind": "Kirim sebagai",
     "bulkMediaHint": "Dengan lampiran, pesan menjadi keterangannya. Berkas yang dipilih dikirim di dalam permintaan, jadi berkas besar untuk banyak penerima memerlukan URL media publik.",
     "bulkMediaTooLarge": "Berkas ini terlalu besar untuk dikirim inline ke {{count}} penerima: pada jumlah tersebut tiap berkas maksimal {{size}}. Gunakan URL media publik, atau kirim ke lebih sedikit penerima.",
