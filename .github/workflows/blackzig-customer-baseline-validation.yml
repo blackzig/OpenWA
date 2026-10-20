@@ -35,6 +35,32 @@ jobs:
       - name: SDK/dashboard contract shapes
         run: npm run check:contract-shapes
 
+
+  api-static:
+    name: API static checks and changed tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked packages
+        run: npm ci
+      - name: Unit tests for changed delay behavior
+        run: npm test -- --runInBand src/modules/message/bulk-message-delay.spec.ts
+      - name: Formatting
+        run: npm run format:check
+      - name: TypeScript type-check including specs
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Build API
+        run: npm run build
+      - name: OpenAPI contract snapshot
+        run: npm run openapi:check
+      - name: Check client/server contract shapes
+        run: npm run check:contract-shapes
+
   dashboard:
     name: Dashboard checks (customer baseline)
     runs-on: ubuntu-latest
