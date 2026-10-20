@@ -1,0 +1,50 @@
+name: BlackZig v0.24.0 validation
+
+on:
+  push:
+    branches:
+      - feature/intervalo-aleatorio-0-5min-v0.24.0
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API and delay tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Delay unit tests
+        run: npm test -- --runInBand src/modules/message/bulk-message-delay.spec.ts
+      - name: Typecheck API and test files
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Build API
+        run: npm run build
+      - name: Verify OpenAPI snapshot
+        run: npm run openapi:check
+
+  dashboard:
+    name: Dashboard and translations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - name: Install dashboard dependencies
+        run: cd dashboard && npm ci
+      - name: Check translations
+        run: cd dashboard && npm run i18n:check
+      - name: Build dashboard
+        run: cd dashboard && npm run build
