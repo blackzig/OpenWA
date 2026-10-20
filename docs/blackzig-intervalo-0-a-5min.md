@@ -21,7 +21,7 @@ Example request options:
 }
 ```
 
-The integer milliseconds value is capped by DTO validation in the **1000–300000** range. Zero is possible only as a *randomly selected wait*, not as the configured upper limit.
+The integer milliseconds value is capped by DTO validation in the **1000–300000** range. Zero is possible only as a _randomly selected wait_, not as the configured upper limit.
 
 ## Scope and caveats
 

@@ -154,7 +154,8 @@ class BulkMessageOptionsDto {
   randomizeDelay?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Choose a uniformly random delay in 0..delayBetweenMessages milliseconds (inclusive). Overrides legacy jitter; defaults to 300000 ms if no delay is given.',
+    description:
+      'Choose a uniformly random delay in 0..delayBetweenMessages milliseconds (inclusive). Overrides legacy jitter; defaults to 300000 ms if no delay is given.',
     default: false,
   })
   @ToStrictBoolean()
