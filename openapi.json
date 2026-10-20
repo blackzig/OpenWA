@@ -21325,12 +21325,17 @@
             "description": "Delay between messages in ms.",
             "default": 3000,
             "minimum": 1000,
-            "maximum": 60000
+            "maximum": 300000
           },
           "randomizeDelay": {
             "type": "boolean",
             "description": "Add random 0-2s to delay",
             "default": true
+          },
+          "randomizeFullRange": {
+            "type": "boolean",
+            "description": "Choose a uniformly random delay in 0..delayBetweenMessages milliseconds (inclusive). Overrides legacy jitter; defaults to 300000 ms if no delay is given.",
+            "default": false
           },
           "stopOnError": {
             "type": "boolean",

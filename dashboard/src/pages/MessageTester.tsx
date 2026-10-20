@@ -175,6 +175,7 @@ export function MessageTester() {
   const [forwardMessageId, setForwardMessageId] = useState('');
   const [bulkRecipients, setBulkRecipients] = useState('');
   const [bulkDelay, setBulkDelay] = useState('');
+  const [bulkFullRange, setBulkFullRange] = useState(false);
   const [bulkMediaKind, setBulkMediaKind] = useState<BulkMediaKind>('document');
   const [bulkMediaKindChosen, setBulkMediaKindChosen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -401,7 +402,7 @@ export function MessageTester() {
       !bulkTextTooLong &&
       bulkRecipientList.length > 0 &&
       bulkRecipientList.length <= BULK_MAX_RECIPIENTS &&
-      (delayMs === undefined || (!Number.isNaN(delayMs) && delayMs >= 1000 && delayMs <= 60000));
+      (delayMs === undefined || (!Number.isNaN(delayMs) && delayMs >= 1000 && delayMs <= 300000));
   }
 
   // A new send replaces the batch on screen, so it waits for an in-flight cancel: the cancel's answer
@@ -504,7 +505,14 @@ export function MessageTester() {
       if (messageType === 'bulk') {
         const batch = await messageApi.sendBulk(session, {
           messages: buildBulkMessages(bulkRecipientList, content, bulkAttachment),
-          ...(delayMs !== undefined ? { options: { delayBetweenMessages: delayMs } } : {}),
+          ...(delayMs !== undefined || bulkFullRange
+            ? {
+                options: {
+                  ...(delayMs !== undefined ? { delayBetweenMessages: delayMs } : {}),
+                  ...(bulkFullRange ? { randomizeFullRange: true } : {}),
+                },
+              }
+            : {}),
         });
         batchSessionRef.current = session;
         setResponse({ success: true, timestamp: new Date().toISOString(), batchId: batch.batchId });
@@ -1152,13 +1160,27 @@ export function MessageTester() {
                     id="mt-18"
                     type="number"
                     min={1000}
-                    max={60000}
+                    max={300000}
                     step={500}
                     value={bulkDelay}
                     onChange={e => setBulkDelay(e.target.value)}
                     placeholder="3000"
                   />
                   <span className="hint">{t('messageTester.bulkDelayHint')}</span>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="mt-bulk-full-range">
+                    <input
+                      id="mt-bulk-full-range"
+                      type="checkbox"
+                      checked={bulkFullRange}
+                      onChange={e => {
+                        setBulkFullRange(e.target.checked);
+                        if (e.target.checked && bulkDelay.trim() === '') setBulkDelay('300000');
+                      }}
+                    />
+                    {t('messageTester.bulkFullRange')}
+                  </label>
                 </div>
               </>
             )}

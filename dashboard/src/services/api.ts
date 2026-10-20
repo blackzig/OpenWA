@@ -519,6 +519,7 @@ export interface SendBulkPayload {
   options?: {
     delayBetweenMessages?: number;
     randomizeDelay?: boolean;
+    randomizeFullRange?: boolean;
     stopOnError?: boolean;
   };
 }
