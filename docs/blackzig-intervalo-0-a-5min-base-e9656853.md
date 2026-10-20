@@ -31,6 +31,7 @@ Exemplo de opções para a API:
 
 As verificações executadas pelo GitHub Actions usam o código da branch, **não**
 a instalação em andamento do cliente. Somente realizar implantação após:
+
 1. Confirmar o HEAD e salvar `git diff` local (incluindo alterações de Vite).
 2. Identificar o comando que inicia os serviços e como os dados persistem.
 3. Fazer backup da instalação e dos dados, inclusive credenciais, em local privado.
