@@ -123,6 +123,17 @@ const MEDIA_UPLOAD_MAX_BYTES = 18 * 1024 * 1024;
 // Batch statuses that stop the progress polling (mirrors the backend BatchStatus enum).
 const TERMINAL_BATCH_STATUSES: readonly BatchStatus[] = ['completed', 'cancelled', 'failed'];
 
+/** Format the backend's actual deadline; never estimate from the 0-5 min range. */
+export function formatNextBulkSendCountdown(nextSendAt: string, now: number): string | null {
+  const deadline = Date.parse(nextSendAt);
+  if (!Number.isFinite(deadline)) return null;
+  const remainingSeconds = Math.ceil((deadline - now) / 1000);
+  if (remainingSeconds <= 0) return '00:00';
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function MessageTester() {
   const { t } = useTranslation();
   useDocumentTitle(t('messageTester.title'));
@@ -181,12 +192,21 @@ export function MessageTester() {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   // Live bulk-batch progress, polled every ~2s while the batch runs (see startBatchPolling).
   const [batchStatus, setBatchStatus] = useState<BatchStatusResponse | null>(null);
+  const [batchCountdownNow, setBatchCountdownNow] = useState(Date.now);
   const [batchCancelling, setBatchCancelling] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
   const batchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // The session a running batch belongs to: the user may switch the selector mid-batch, and
   // poll/cancel must keep addressing the session the batch was created on.
   const batchSessionRef = useRef('');
+
+  // Count down locally each second; the existing poll supplies the server's exact deadline.
+  useEffect(() => {
+    if (batchStatus?.status !== 'processing' || !batchStatus.nextSendAt) return;
+    setBatchCountdownNow(Date.now());
+    const timer = setInterval(() => setBatchCountdownNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [batchStatus?.status, batchStatus?.nextSendAt]);
 
   const {
     data: groups = [],
@@ -1298,6 +1318,17 @@ export function MessageTester() {
                       total: batchStatus.progress.total,
                     })}
                   </div>
+                  {batchStatus.status === 'processing' && batchStatus.nextSendAt && (
+                    <div className="batch-progress-line" role="timer" aria-live="off">
+                      {(() => {
+                        const remaining = formatNextBulkSendCountdown(batchStatus.nextSendAt, batchCountdownNow);
+                        if (remaining === null) return null;
+                        return remaining === '00:00'
+                          ? t('messageTester.batch.nextSendPreparing')
+                          : t('messageTester.batch.nextSendIn', { time: remaining });
+                      })()}
+                    </div>
+                  )}
                   {batchError && <div className="batch-error">{batchError}</div>}
                 </div>
               )}
