@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from 
 import type { Response } from 'express';
 import { MessageService } from './message.service';
 import { BulkMessageService } from './bulk-message.service';
+import { BatchStatus } from './entities/message-batch.entity';
 import {
   SendTextMessageDto,
   SendMediaMessageDto,
