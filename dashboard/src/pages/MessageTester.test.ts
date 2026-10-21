@@ -875,3 +875,14 @@ test('Send stays disabled while a batch cancel is in flight, so its answer canno
   });
   assert.equal(sendButton().disabled, false);
 });
+
+test('formatNextBulkSendCountdown reports the real remaining mm:ss, then transitions to 00:00', async () => {
+  const { formatNextBulkSendCountdown } = await import('./MessageTester.tsx');
+  const now = Date.parse('2026-10-21T12:00:00.000Z');
+  assert.equal(formatNextBulkSendCountdown(new Date(now + 300_000).toISOString(), now), '05:00');
+  assert.equal(formatNextBulkSendCountdown(new Date(now + 154_100).toISOString(), now), '02:35');
+  assert.equal(formatNextBulkSendCountdown(new Date(now + 1).toISOString(), now), '00:01');
+  assert.equal(formatNextBulkSendCountdown(new Date(now).toISOString(), now), '00:00');
+  assert.equal(formatNextBulkSendCountdown(new Date(now - 10_000).toISOString(), now), '00:00');
+  assert.equal(formatNextBulkSendCountdown('not-a-date', now), null);
+});

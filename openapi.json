@@ -20675,6 +20675,11 @@
               "$ref": "#/components/schemas/BatchMessageResultDto"
             }
           },
+          "nextSendAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Actual scheduled time of the next bulk send, only while the batch is waiting between messages."
+          },
           "startedAt": {
             "type": "string",
             "format": "date-time",

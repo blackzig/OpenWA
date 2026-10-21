@@ -557,6 +557,8 @@ export interface BatchStatusResponse {
   progress: BatchProgress;
   /** One entry per recipient already attempted — empty until the first send resolves. */
   results: BatchMessageResult[];
+  /** Server-calculated deadline for the next item. Missing while sending or after completion. */
+  nextSendAt?: string;
   startedAt?: string | null;
   completedAt?: string | null;
 }

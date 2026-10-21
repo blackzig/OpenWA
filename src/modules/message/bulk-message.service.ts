@@ -121,6 +121,8 @@ const ENDED_ELSEWHERE = new Set<BatchStatus>([BatchStatus.FAILED, BatchStatus.CO
 export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = createLogger(BulkMessageService.name);
   private readonly processingBatches = new Map<string, boolean>(); // Track active batches for cancellation
+  /** In-process timing only. Nothing is persisted or scheduled after an app restart. */
+  private readonly nextSendAt = new Map<string, number>();
   private inFlightBatches = 0; // count of batches currently in processBatch (memory bound, see cap above)
   /** Set at the top of onModuleDestroy: no batch may start sending once the shutdown fail has run. */
   private shuttingDown = false;
@@ -434,6 +436,12 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     return batch;
   }
 
+  /** Countdown for the currently waiting bulk item. Absent while sending or after completion. */
+  getNextSendAt(batchDbId: string): string | undefined {
+    const deadline = this.nextSendAt.get(batchDbId);
+    return deadline === undefined ? undefined : new Date(deadline).toISOString();
+  }
+
   async cancelBatch(sessionId: string, batchId: string): Promise<MessageBatch> {
     const batch = await this.batchRepository.findOne({
       where: { batchId, sessionId },
@@ -458,6 +466,7 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     // batch run elsewhere (or already finished here) must not get one: it would leak, and it would
     // make a later takeover reap skip the batch.
     if (this.processingBatches.has(batch.id)) this.processingBatches.set(batch.id, false);
+    this.nextSendAt.delete(batch.id);
 
     // Update status — guarded to the non-terminal statuses IN the UPDATE, so a batch that reached a
     // terminal state between the read above and this write is not relabelled CANCELLED after the
@@ -522,6 +531,7 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     } finally {
       if (reserved) this.inFlightBatches--;
       this.processingBatches.delete(batchDbId);
+      this.nextSendAt.delete(batchDbId);
     }
   }
 
@@ -761,7 +771,12 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     // Delay before next message (except for last)
     if (i < batch.messages.length - 1 && this.processingBatches.get(batch.id)) {
       const delay = calculateBulkDelayMs(batch.options);
-      await setTimeout(delay);
+      this.nextSendAt.set(batch.id, Date.now() + delay);
+      try {
+        await setTimeout(delay);
+      } finally {
+        this.nextSendAt.delete(batch.id);
+      }
     }
     return true;
   }

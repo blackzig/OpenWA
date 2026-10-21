@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from 
 import type { Response } from 'express';
 import { MessageService } from './message.service';
 import { BulkMessageService } from './bulk-message.service';
+import { BatchStatus } from './entities/message-batch.entity';
 import {
   SendTextMessageDto,
   SendMediaMessageDto,
@@ -594,6 +595,7 @@ export class MessageController {
       status: batch.status,
       progress: batch.progress,
       results: batch.results,
+      nextSendAt: batch.status === BatchStatus.PROCESSING ? this.bulkMessageService.getNextSendAt(batch.id) : undefined,
       startedAt: batch.startedAt,
       completedAt: batch.completedAt,
     };
