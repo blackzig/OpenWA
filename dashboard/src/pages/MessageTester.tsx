@@ -1156,7 +1156,7 @@ export function MessageTester() {
                     step={500}
                     value={bulkDelay}
                     onChange={e => setBulkDelay(e.target.value)}
-                    placeholder="3000"
+                    placeholder=""
                   />
                   <span className="hint">{t('messageTester.bulkDelayHint')}</span>
                 </div>
