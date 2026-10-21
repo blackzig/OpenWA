@@ -274,6 +274,13 @@ export class BatchStatusResponseDto {
   @ApiPropertyOptional({
     type: String,
     format: 'date-time',
+    description: 'Actual scheduled time of the next bulk send, only while the batch is waiting between messages.',
+  })
+  nextSendAt?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
     nullable: true,
     description: 'When processing started; null while the batch is pending.',
   })
