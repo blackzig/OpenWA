@@ -842,7 +842,8 @@
     "groupSendCancelled": "{{count}}, cancelled",
     "groupSendStopped": "{{count}}, stopped after HTTP {{status}}",
     "response": {
-      "timestamp": "Timestamp",
+      "timestamp": "Response time (Brasília)",
+      "batchAcceptedAt": "Batch accepted at (Brasília)",
       "messageId": "Message ID",
       "batchId": "Batch ID",
       "error": "Error",
@@ -859,11 +860,13 @@
         "cancelled": "Cancelled",
         "failed": "Failed"
       },
+      "acceptedLabel": "Batch accepted for processing",
       "progress": "Sent {{sent}} of {{total}} · {{failed}} failed · {{pending}} pending",
       "cancel": "Cancel Batch",
       "cancelling": "Cancelling...",
       "nextSendIn": "Next send in {{time}}",
-      "nextSendPreparing": "Preparing next send..."
+      "nextSendPreparing": "Preparing next send...",
+      "lastSentAt": "Last send accepted by API: {{time}}"
     }
   },
   "infrastructure": {

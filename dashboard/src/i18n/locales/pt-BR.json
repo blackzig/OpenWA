@@ -798,7 +798,8 @@
     "groupSendCancelled": "{{count}}, cancelados",
     "groupSendStopped": "{{count}}, interrompido após HTTP {{status}}",
     "response": {
-      "timestamp": "Data/Hora",
+      "timestamp": "Data/hora da resposta (Brasília)",
+      "batchAcceptedAt": "Lote aceito em (Brasília)",
       "messageId": "ID da mensagem",
       "batchId": "ID do lote",
       "error": "Erro",
@@ -815,11 +816,13 @@
         "cancelled": "Cancelado",
         "failed": "Falhou"
       },
+      "acceptedLabel": "Lote aceito para processamento",
       "progress": "Enviadas {{sent}} de {{total}} · {{failed}} falharam · {{pending}} pendentes",
       "cancel": "Cancelar lote",
       "cancelling": "Cancelando...",
       "nextSendIn": "Próximo disparo em {{time}}",
-      "nextSendPreparing": "Preparando o próximo disparo..."
+      "nextSendPreparing": "Preparando o próximo disparo...",
+      "lastSentAt": "Último envio aceito pela API: {{time}}"
     }
   },
   "templates": {

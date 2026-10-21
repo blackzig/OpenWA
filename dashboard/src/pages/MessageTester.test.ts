@@ -886,3 +886,16 @@ test('formatNextBulkSendCountdown reports the real remaining mm:ss, then transit
   assert.equal(formatNextBulkSendCountdown(new Date(now - 10_000).toISOString(), now), '00:00');
   assert.equal(formatNextBulkSendCountdown('not-a-date', now), null);
 });
+
+test('batch acceptance date is formatted in Brazilian time without altering the source ISO', async () => {
+  const { formatBrazilianDateTime } = await import('./MessageTester.tsx');
+  const original = '2026-10-21T22:51:31.161Z';
+  assert.equal(formatBrazilianDateTime(original), '21/10/2026 às 19:51:31');
+  assert.equal(original, '2026-10-21T22:51:31.161Z');
+  assert.equal(formatBrazilianDateTime('not-a-date'), '—');
+});
+
+test('Brazilian time uses the São Paulo UTC-3 zone for midnight crossings', async () => {
+  const { formatBrazilianDateTime } = await import('./MessageTester.tsx');
+  assert.equal(formatBrazilianDateTime('2026-10-22T01:04:05.000Z'), '21/10/2026 às 22:04:05');
+});
