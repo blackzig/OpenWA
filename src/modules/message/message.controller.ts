@@ -594,6 +594,7 @@ export class MessageController {
       status: batch.status,
       progress: batch.progress,
       results: batch.results,
+      nextSendAt: batch.status === BatchStatus.PROCESSING ? this.bulkMessageService.getNextSendAt(batch.id) : undefined,
       startedAt: batch.startedAt,
       completedAt: batch.completedAt,
     };
