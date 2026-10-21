@@ -11,6 +11,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { In, IsNull } from 'typeorm';
 import {
   BulkMessageService,
+  resolveBulkDelayOptions,
+  calculateBulkDelayMs,
+  DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS,
   resolveFinalBatchStatus,
   sanitizeBatchError,
   resolveMaxConcurrentBatches,
@@ -2152,5 +2155,55 @@ describe('BulkMessageService.createBatch base64 media cap', () => {
     expect(engine.sendImageMessage).toHaveBeenCalledTimes(1);
     expect(batch.progress.sent).toBe(2);
     expect(batch.results).toHaveLength(2);
+  });
+});
+
+describe('Bulk message delay (client 0-5 minute requirement)', () => {
+  it('defaults to an internal 0-5 minute randomized interval when the caller leaves the delay blank', () => {
+    expect(resolveBulkDelayOptions(undefined)).toEqual({
+      delayBetweenMessages: 0,
+      randomizeDelay: true,
+      stopOnError: false,
+    });
+    expect(resolveBulkDelayOptions({ stopOnError: true })).toEqual({
+      delayBetweenMessages: 0,
+      randomizeDelay: true,
+      stopOnError: true,
+    });
+  });
+
+  it('covers both bounds and the middle of the 0..300000ms interval', () => {
+    const options = resolveBulkDelayOptions(undefined);
+    expect(DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS).toBe(300_000);
+    expect(calculateBulkDelayMs(options, () => 0)).toBe(0);
+    expect(calculateBulkDelayMs(options, () => 0.5)).toBe(150_000);
+    expect(calculateBulkDelayMs(options, () => 0.999999999)).toBe(300_000);
+  });
+
+  it('preserves explicit fixed-base delays with the original 0-2 second jitter', () => {
+    const options = resolveBulkDelayOptions({ delayBetweenMessages: 30_000 });
+    expect(options).toEqual({
+      delayBetweenMessages: 30_000,
+      randomizeDelay: true,
+      stopOnError: false,
+    });
+    expect(calculateBulkDelayMs(options, () => 0)).toBe(30_000);
+    expect(calculateBulkDelayMs(options, () => 0.5)).toBe(31_000);
+    expect(calculateBulkDelayMs(options, () => 0.999)).toBe(31_998);
+  });
+
+  it('preserves disabled randomization and its original base delay', () => {
+    const options = resolveBulkDelayOptions({ randomizeDelay: false });
+    expect(options.delayBetweenMessages).toBe(3_000);
+    expect(calculateBulkDelayMs(options, () => 0.7)).toBe(3_000);
+    const fixed = resolveBulkDelayOptions({
+      delayBetweenMessages: 60_000,
+      randomizeDelay: false,
+    });
+    expect(calculateBulkDelayMs(fixed, () => 0.3)).toBe(60_000);
+  });
+
+  it('keeps 0ms saved testing batches with randomization disabled untouched', () => {
+    expect(calculateBulkDelayMs({ delayBetweenMessages: 0, randomizeDelay: false })).toBe(0);
   });
 });
