@@ -339,11 +339,9 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-    const options = {
-      delayBetweenMessages: dto.options?.delayBetweenMessages ?? 3000,
-      randomizeDelay: dto.options?.randomizeDelay ?? true,
-      stopOnError: dto.options?.stopOnError ?? false,
-    };
+    // No explicit interval: choose a fresh random pause from 0 to 5 minutes between bulk items.
+    // Explicit delayBetweenMessages retains the original fixed-base + 0-2s jitter behavior.
+    const options = resolveBulkDelayOptions(dto.options);
 
     const progress: BatchProgress = {
       total: messages.length,
@@ -762,7 +760,7 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
 
     // Delay before next message (except for last)
     if (i < batch.messages.length - 1 && this.processingBatches.get(batch.id)) {
-      const delay = this.calculateDelay(batch.options);
+      const delay = calculateBulkDelayMs(batch.options);
       await setTimeout(delay);
     }
     return true;
@@ -1088,11 +1086,34 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     }
   }
 
-  private calculateDelay(options: { delayBetweenMessages: number; randomizeDelay: boolean }): number {
-    let delay = options.delayBetweenMessages;
-    if (options.randomizeDelay) {
-      delay += Math.random() * 2000; // Add 0-2 seconds random
-    }
-    return delay;
-  }
 }
+ 
+/** Maximum pause between bulk messages when no interval was configured. */
+export const DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS = 300_000;
+
+export function resolveBulkDelayOptions(dtoOptions?: SendBulkMessageDto['options']): {
+  delayBetweenMessages: number;
+  randomizeDelay: boolean;
+  stopOnError: boolean;
+} {
+  const randomizeDelay = dtoOptions?.randomizeDelay ?? true;
+  return {
+    // Zero is an internal marker: the public DTO permits explicit values only from 1000 to 60000.
+    // Existing saved batches with 3000 + randomizeDelay stay unchanged after this upgrade.
+    delayBetweenMessages: dtoOptions?.delayBetweenMessages ?? (randomizeDelay ? 0 : 3000),
+    randomizeDelay,
+    stopOnError: dtoOptions?.stopOnError ?? false,
+  };
+}
+
+export function calculateBulkDelayMs(
+  options: { delayBetweenMessages: number; randomizeDelay: boolean },
+  random: () => number = Math.random,
+): number {
+  if (options.randomizeDelay && options.delayBetweenMessages === 0) {
+    return Math.floor(random() * (DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS + 1));
+  }
+  // Explicitly configured intervals preserve OpenWA 0.25.0 semantics.
+  return options.delayBetweenMessages + (options.randomizeDelay ? random() * 2000 : 0);
+}
+
