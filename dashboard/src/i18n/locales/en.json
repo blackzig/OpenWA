@@ -860,6 +860,7 @@
         "cancelled": "Cancelled",
         "failed": "Failed"
       },
+      "acceptedLabel": "Batch accepted for processing",
       "progress": "Sent {{sent}} of {{total}} · {{failed}} failed · {{pending}} pending",
       "cancel": "Cancel Batch",
       "cancelling": "Cancelling...",
