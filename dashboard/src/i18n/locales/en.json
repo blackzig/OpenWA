@@ -861,7 +861,9 @@
       },
       "progress": "Sent {{sent}} of {{total}} · {{failed}} failed · {{pending}} pending",
       "cancel": "Cancel Batch",
-      "cancelling": "Cancelling..."
+      "cancelling": "Cancelling...",
+      "nextSendIn": "Next send in {{time}}",
+      "nextSendPreparing": "Preparing next send..."
     }
   },
   "infrastructure": {
