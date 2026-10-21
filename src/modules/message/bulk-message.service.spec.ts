@@ -424,6 +424,26 @@ describe('BulkMessageService.processBatch', () => {
   const runProcessBatch = (): Promise<void> =>
     (service as unknown as { processBatch: (id: string) => Promise<void> }).processBatch('b1');
 
+  it('exposes the exact next-send deadline only while the bulk batch is waiting', async () => {
+    const batch = makeBatch(2);
+    batch.options = { delayBetweenMessages: 150, randomizeDelay: false, stopOnError: false };
+    repo.findOne.mockResolvedValue(batch);
+
+    const process = runProcessBatch();
+    let deadline: string | undefined;
+    for (let i = 0; i < 40; i++) {
+      deadline = service.getNextSendAt('b1');
+      if (deadline) break;
+      await new Promise(resolve => setTimeout(resolve, 2));
+    }
+    expect(deadline).toEqual(expect.any(String));
+    expect(Date.parse(deadline!)).toBeGreaterThan(Date.now());
+
+    await process;
+    expect(engine.sendTextMessage).toHaveBeenCalledTimes(2);
+    expect(service.getNextSendAt('b1')).toBeUndefined();
+  });
+
   const inFlightMarkers = (): Map<string, boolean> =>
     (service as unknown as { processingBatches: Map<string, boolean> }).processingBatches;
 
