@@ -58,7 +58,7 @@ jobs:
           tar -czf client-package/dashboard-dist.tar.gz -C dashboard dist
           printf 'base_commit=f045dde1f9f8b623668ab02971009228296d60e4\npatch_commit=%s\nversion=0.25.0\n' "${GITHUB_SHA}" > client-package/build.txt
           (cd client-package && sha256sum bulk-message.service.js dashboard-dist.tar.gz > SHA256SUMS)
-          sha256sum -c client-package/SHA256SUMS --ignore-missing || true
+          (cd client-package && sha256sum -c SHA256SUMS)
           ls -l client-package
 
       - name: Upload verified client patch
