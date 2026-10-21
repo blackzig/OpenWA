@@ -816,6 +816,7 @@
         "cancelled": "Cancelado",
         "failed": "Falhou"
       },
+      "acceptedLabel": "Lote aceito para processamento",
       "progress": "Enviadas {{sent}} de {{total}} · {{failed}} falharam · {{pending}} pendentes",
       "cancel": "Cancelar lote",
       "cancelling": "Cancelando...",
