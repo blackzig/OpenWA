@@ -817,7 +817,9 @@
       },
       "progress": "Enviadas {{sent}} de {{total}} · {{failed}} falharam · {{pending}} pendentes",
       "cancel": "Cancelar lote",
-      "cancelling": "Cancelando..."
+      "cancelling": "Cancelando...",
+      "nextSendIn": "Próximo disparo em {{time}}",
+      "nextSendPreparing": "Preparando o próximo disparo..."
     }
   },
   "templates": {
