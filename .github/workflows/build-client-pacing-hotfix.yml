@@ -1,0 +1,70 @@
+name: Build OpenWA 0.25.0 client pacing hotfix
+
+on:
+  push:
+    branches:
+      - fix/bulk-delay-random-0-5-min-0250
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Verify and compile client hotfix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      SCARF_ANALYTICS: 'false'
+    steps:
+      - name: Check out exact branch commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Check TypeScript including specs
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Test bulk pacing without sending messages
+        run: npm test -- --runInBand --runTestsByPath src/modules/message/bulk-message.service.spec.ts
+
+      - name: Compile backend
+        run: npm run build
+
+      - name: Install frontend dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Compile dashboard
+        working-directory: dashboard
+        run: npm run build
+
+      - name: Prepare versioned patch archive and SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/modules/message/bulk-message.service.js
+          test -s dashboard/dist/index.html
+          mkdir -p client-package
+          cp dist/modules/message/bulk-message.service.js client-package/bulk-message.service.js
+          tar -czf client-package/dashboard-dist.tar.gz -C dashboard dist
+          printf 'base_commit=f045dde1f9f8b623668ab02971009228296d60e4\npatch_commit=%s\nversion=0.25.0\n' "${GITHUB_SHA}" > client-package/build.txt
+          (cd client-package && sha256sum bulk-message.service.js dashboard-dist.tar.gz > SHA256SUMS)
+          sha256sum -c client-package/SHA256SUMS --ignore-missing || true
+          ls -l client-package
+
+      - name: Upload verified client patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwa-0250-humanized-5min
+          path: client-package/
+          if-no-files-found: error
+          retention-days: 14
