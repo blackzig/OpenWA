@@ -33,6 +33,22 @@ import { groupLabel, isGatewayRefusal, planGroupSend } from '../utils/groupSelec
 import { sendSequentially } from '../utils/sendSequentially';
 import './MessageTester.css';
 
+/** Show timestamps in Brazilian civil time without changing API/SQLite ISO values. */
+export function formatBrazilianDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date).replace(', ', ' às ');
+}
+
 interface ApiResponse {
   success: boolean;
   messageId?: string;
@@ -627,6 +643,9 @@ export function MessageTester() {
       setIsLoading(false);
     }
   };
+
+  // Each sentAt comes from the engine's accepted-send result, not a delivery/read receipt.
+  const lastBulkSentAt = batchStatus?.results.filter(result => result.status === 'sent' && result.sentAt).at(-1)?.sentAt;
 
   const batchPercent =
     batchStatus && batchStatus.progress.total > 0
@@ -1229,8 +1248,8 @@ export function MessageTester() {
 
               <div className="response-details">
                 <div className="detail-row">
-                  <span className="detail-label">{t('messageTester.response.timestamp')}</span>
-                  <span className="detail-value">{response.timestamp}</span>
+                  <span className="detail-label">{t(response.batchId ? 'messageTester.response.batchAcceptedAt' : 'messageTester.response.timestamp')}</span>
+                  <span className="detail-value">{formatBrazilianDateTime(response.timestamp)}</span>
                 </div>
                 {response.messageId && (
                   <div className="detail-row">
@@ -1318,6 +1337,11 @@ export function MessageTester() {
                       total: batchStatus.progress.total,
                     })}
                   </div>
+                  {lastBulkSentAt && (
+                    <div className="batch-progress-line">
+                      {t('messageTester.batch.lastSentAt', { time: formatBrazilianDateTime(lastBulkSentAt) })}
+                    </div>
+                  )}
                   {batchStatus.status === 'processing' && batchStatus.nextSendAt && (
                     <div className="batch-progress-line" role="timer" aria-live="off">
                       {(() => {
