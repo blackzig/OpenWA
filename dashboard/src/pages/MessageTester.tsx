@@ -1231,7 +1231,7 @@ export function MessageTester() {
                 {response.success ? (
                   <>
                     <CheckCircle size={20} />
-                    <span>{t('messageTester.successLabel')}</span>
+                    <span>{t(response.batchId ? 'messageTester.batch.acceptedLabel' : 'messageTester.successLabel')}</span>
                   </>
                 ) : (
                   <>
