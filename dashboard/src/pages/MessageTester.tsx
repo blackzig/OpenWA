@@ -29,6 +29,7 @@ import {
   type BulkMediaKind,
 } from '../utils/bulkMedia';
 import { PageHeader } from '../components/PageHeader';
+import { buildBulkPacing, previewBlockPacing, type BulkPacingMode } from '../utils/bulkPacing';
 import { BulkComposeOptions } from '../components/BulkComposeOptions';
 import { buildPersonalizedBulkMessages, buildRandomizedBulkMessages, type BulkComposeMode, type PersonalizedRow } from '../utils/bulkPersonalization';
 import { GroupPicker } from '../components/GroupPicker';
@@ -205,6 +206,9 @@ export function MessageTester() {
   const [forwardMessageId, setForwardMessageId] = useState('');
   const [bulkRecipients, setBulkRecipients] = useState('');
   const [bulkDelay, setBulkDelay] = useState('');
+  const [bulkPacingMode, setBulkPacingMode] = useState<BulkPacingMode>('random');
+  const [bulkBlockSize, setBulkBlockSize] = useState('5');
+  const [bulkBlockSequence, setBulkBlockSequence] = useState('2,3,4,5,1');
   const [bulkMode, setBulkMode] = useState<BulkComposeMode>('same');
   const [bulkPersonalizedRows, setBulkPersonalizedRows] = useState<PersonalizedRow[]>([{ id: 'initial-0', recipient: '', message: '' }]);
   const [bulkVariations, setBulkVariations] = useState<string[]>(['', '']);
@@ -391,7 +395,7 @@ export function MessageTester() {
   const pollOptionsFilled = pollOptions.map(o => o.trim()).filter(o => o.length > 0);
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
-  const delayMs = bulkDelay.trim() === '' ? undefined : parseInt(bulkDelay, 10);
+  const pacing = buildBulkPacing(bulkPacingMode, bulkBlockSize, bulkBlockSequence, bulkDelay);
   const bulkAttachment = messageType === 'bulk' ? toBulkAttachment(bulkMediaKind, mediaFile, mediaUrl) : null;
   const bulkMediaTooLarge =
     messageType === 'bulk' &&
@@ -449,7 +453,7 @@ export function MessageTester() {
   } else if (messageType === 'forward') {
     formValid = forwardTo.trim().length > 0 && forwardMessageId.trim().length > 0;
   } else if (messageType === 'bulk') {
-    const delayValid = delayMs === undefined || (!Number.isNaN(delayMs) && delayMs >= 1000 && delayMs <= 60000);
+    const delayValid = pacing.valid;
     formValid = bulkMode === 'same'
       ? (content.trim().length > 0 || bulkAttachment !== null) &&
         !bulkMediaTooLarge && !mediaUrlInvalid && !bulkAudioWithText && !bulkCaptionTooLong &&
@@ -558,7 +562,7 @@ export function MessageTester() {
       if (messageType === 'bulk') {
         const batch = await messageApi.sendBulk(session, {
           messages: bulkMode === 'same' ? buildBulkMessages(bulkRecipientList, content, bulkAttachment) : bulkPrepared.messages,
-          ...(delayMs !== undefined ? { options: { delayBetweenMessages: delayMs } } : {}),
+          ...(pacing.options ? { options: pacing.options } : {}),
         });
         batchSessionRef.current = session;
         setResponse({ success: true, timestamp: new Date().toISOString(), batchId: batch.batchId });
@@ -1217,20 +1221,68 @@ export function MessageTester() {
                   </div>
                 )}
                 <div className="form-group">
-                  <label htmlFor="mt-18">
-                    {t('messageTester.bulkDelay')} ({t('common.optional')})
-                  </label>
-                  <input
-                    id="mt-18"
-                    type="number"
-                    min={1000}
-                    max={60000}
-                    step={500}
-                    value={bulkDelay}
-                    onChange={e => setBulkDelay(e.target.value)}
-                    placeholder=""
-                  />
-                  <span className="hint">{t('messageTester.bulkDelayHint')}</span>
+                  <label htmlFor="bulk-pacing-mode">{t('messageTester.bulkPacing.mode')}</label>
+                  <select
+                    id="bulk-pacing-mode"
+                    value={bulkPacingMode}
+                    onChange={event => setBulkPacingMode(event.target.value as BulkPacingMode)}
+                  >
+                    <option value="random">{t('messageTester.bulkPacing.random')}</option>
+                    <option value="blocks">{t('messageTester.bulkPacing.blocks')}</option>
+                    <option value="custom">{t('messageTester.bulkPacing.custom')}</option>
+                  </select>
+                  {bulkPacingMode === 'random' && (
+                    <span className="hint">{t('messageTester.bulkPacing.randomHint')}</span>
+                  )}
+                  {bulkPacingMode === 'blocks' && (
+                    <div className="bulk-pacing-config">
+                      <label htmlFor="bulk-block-size">{t('messageTester.bulkPacing.size')}</label>
+                      <input
+                        id="bulk-block-size"
+                        type="number"
+                        min={1}
+                        max={100}
+                        step={1}
+                        value={bulkBlockSize}
+                        onChange={event => setBulkBlockSize(event.target.value)}
+                      />
+                      <label htmlFor="bulk-block-sequence">{t('messageTester.bulkPacing.sequence')}</label>
+                      <input
+                        id="bulk-block-sequence"
+                        type="text"
+                        value={bulkBlockSequence}
+                        onChange={event => setBulkBlockSequence(event.target.value)}
+                        placeholder="2,3,4,5,1"
+                      />
+                      <span className="hint">{t('messageTester.bulkPacing.blocksHint')}</span>
+                      {pacing.valid && pacing.sequence && (
+                        <div className="bulk-pacing-preview" role="status">
+                          {previewBlockPacing(Number(bulkBlockSize), pacing.sequence)
+                            .map((part, index) => <span key={index}>{part}</span>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {bulkPacingMode === 'custom' && (
+                    <>
+                      <label htmlFor="mt-18">{t('messageTester.bulkDelay')}</label>
+                      <input
+                        id="mt-18"
+                        type="number"
+                        min={1000}
+                        max={60000}
+                        step={500}
+                        value={bulkDelay}
+                        onChange={event => setBulkDelay(event.target.value)}
+                      />
+                      <span className="hint">{t('messageTester.bulkPacing.customHint')}</span>
+                    </>
+                  )}
+                  {!pacing.valid && (
+                    <span className="hint error" role="alert">
+                      {t('messageTester.bulkPacing.errors.' + pacing.error)}
+                    </span>
+                  )}
                 </div>
               </>
             )}
