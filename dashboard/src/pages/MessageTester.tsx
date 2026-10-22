@@ -1116,6 +1116,18 @@ export function MessageTester() {
 
             {messageType === 'bulk' && (
               <>
+                <BulkComposeOptions
+                  mode={bulkMode}
+                  onModeChange={setBulkMode}
+                  rows={bulkPersonalizedRows}
+                  onRowsChange={setBulkPersonalizedRows}
+                  variations={bulkVariations}
+                  onVariationsChange={setBulkVariations}
+                  preview={bulkPrepared.messages}
+                  error={bulkPrepared.error}
+                  canWrite={canWrite}
+                />
+                {bulkMode !== 'personalized' && (
                 <div className="form-group">
                   <div
                     style={{
@@ -1151,6 +1163,8 @@ export function MessageTester() {
                     {t('messageTester.bulkRecipientsCount', { count: bulkRecipientList.length })}
                   </span>
                 </div>
+                )}
+                {bulkMode === 'same' && (
                 <div className="form-group">
                   <label htmlFor="mt-12">{t('messageTester.messageContent')}</label>
                   <textarea
@@ -1173,8 +1187,9 @@ export function MessageTester() {
                           : ''}
                   </span>
                 </div>
-                {mediaSourceFields}
-                {bulkAttachment && (
+                )}
+                {bulkMode === 'same' && mediaSourceFields}
+                {bulkMode === 'same' && bulkAttachment && (
                   <div className="form-group">
                     <span className="group-label" id="bulk-media-kind-label">
                       {t('messageTester.bulkMediaKind')}
