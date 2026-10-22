@@ -137,7 +137,7 @@ export function buildRandomizedBulkMessages(
 ): BulkMessageItem[] {
   if (!chatIds.length || chatIds.length > MAX_BULK_PERSONALIZED) throw new Error('invalidCount');
   if (drafts.length > MAX_BULK_VARIATIONS) throw new Error('invalidVariations');
-  const options = drafts.map(text => text.trim()).filter(Boolean);
+  const options = [...new Set(drafts.map(text => text.trim()).filter(Boolean))];
   if (options.length < 2) throw new Error('needVariations');
   options.forEach(assertText);
   const seen = new Set<string>();
