@@ -520,6 +520,9 @@ export interface SendBulkPayload {
     delayBetweenMessages?: number;
     randomizeDelay?: boolean;
     stopOnError?: boolean;
+    pacingMode?: 'blocks';
+    blockSize?: number;
+    blockDelaysMinutes?: number[];
   };
 }
 
