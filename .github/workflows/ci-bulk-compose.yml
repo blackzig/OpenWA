@@ -1,0 +1,42 @@
+name: Validate bulk CSV and message variations
+
+on:
+  push:
+    branches:
+      - feature/bulk-csv-personalizado-variacoes-0250
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: dashboard/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Check new CSV parser and variant selection
+        run: node --experimental-strip-types --test src/utils/bulkPersonalization.test.ts
+      - name: Run dashboard unit tests
+        run: npm run test:unit
+      - name: Check dashboard build and TypeScript
+        run: npm run build
+      - name: Lint new files
+        run: npx eslint src/utils/bulkPersonalization.ts src/utils/bulkPersonalization.test.ts src/components/BulkComposeOptions.tsx src/pages/MessageTester.tsx
+      - name: Upload full compiled dashboard for reviewed deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwa0250-bulk-compose-dashboard
+          path: dashboard/dist/
+          if-no-files-found: error
+          retention-days: 14
