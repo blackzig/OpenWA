@@ -49,9 +49,11 @@ jobs:
         run: |
           set -euo pipefail
           test -s dist/modules/message/bulk-message.service.js
+          test -s dist/modules/message/dto/bulk-message.dto.js
           test -s dashboard/dist/index.html
           mkdir -p artifact/api artifact/dashboard
           cp dist/modules/message/bulk-message.service.js artifact/api/
+          cp dist/modules/message/dto/bulk-message.dto.js artifact/api/
           cp -a dashboard/dist/. artifact/dashboard/
           printf 'commit=%s\nbase=OpenWA_0.25.0\nfeature=opt_in_bulk_block_pacing\n' "$GITHUB_SHA" > artifact/BUILDINFO.txt
           (cd artifact && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
