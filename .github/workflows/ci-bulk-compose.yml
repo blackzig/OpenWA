@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feature/bulk-csv-personalizado-variacoes-0250
+  pull_request:
+    branches:
+      - feature/bulk-date-time-ptbr-0250
   workflow_dispatch:
 
 permissions:
