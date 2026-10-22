@@ -1,0 +1,64 @@
+name: Build and validate opt-in block pacing
+
+on:
+  push:
+    branches:
+      - feature/bulk-paced-blocks-0250
+  pull_request:
+    branches:
+      - feature/bulk-csv-personalizado-variacoes-0250
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pacing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      SCARF_ANALYTICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install API dependencies
+        run: npm ci
+      - name: Compile API
+        run: npm run build
+      - name: Test bulk service pacing and backwards compatibility
+        run: npm test -- --runInBand --runTestsByPath src/modules/message/bulk-message.service.spec.ts
+      - name: Install dashboard dependencies
+        working-directory: dashboard
+        run: npm ci
+      - name: Validate dashboard pacing parser
+        working-directory: dashboard
+        run: node --experimental-strip-types --test src/utils/bulkPacing.test.ts
+      - name: Run dashboard regression tests
+        working-directory: dashboard
+        run: npm run test:unit
+      - name: Build dashboard
+        working-directory: dashboard
+        run: npm run build
+      - name: Lint new and modified modules
+        run: npx eslint src/modules/message/bulk-message.service.ts src/modules/message/dto/bulk-message.dto.ts
+      - name: Package compiled API service and complete dashboard
+        run: |
+          set -euo pipefail
+          test -s dist/modules/message/bulk-message.service.js
+          test -s dashboard/dist/index.html
+          mkdir -p artifact/api artifact/dashboard
+          cp dist/modules/message/bulk-message.service.js artifact/api/
+          cp -a dashboard/dist/. artifact/dashboard/
+          printf 'commit=%s\nbase=OpenWA_0.25.0\nfeature=opt_in_bulk_block_pacing\n' "$GITHUB_SHA" > artifact/BUILDINFO.txt
+          (cd artifact && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+      - name: Upload tested artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwa0250-block-pacing-api-and-dashboard
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 14
