@@ -344,8 +344,12 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     // No explicit interval: choose a fresh random pause from 0 to 5 minutes between bulk items.
     // Explicit delayBetweenMessages retains the original fixed-base + 0-2s jitter behavior.
     if (dto.options?.pacingMode === 'blocks') {
-      if (!dto.options.blockSize || !dto.options.blockDelaysMinutes?.length ||
-          dto.options.delayBetweenMessages !== undefined || dto.options.randomizeDelay !== undefined) {
+      if (
+        !dto.options.blockSize ||
+        !dto.options.blockDelaysMinutes?.length ||
+        dto.options.delayBetweenMessages !== undefined ||
+        dto.options.randomizeDelay !== undefined
+      ) {
         throw new BadRequestException(
           'Block pacing requires blockSize and blockDelaysMinutes; do not combine with delayBetweenMessages/randomizeDelay',
         );
@@ -1110,9 +1114,8 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
         return Promise.reject(new Error(`Unsupported message type: ${type}`));
     }
   }
-
 }
- 
+
 /** Maximum pause between bulk messages when no interval was configured. */
 export const DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS = 300_000;
 
@@ -1130,11 +1133,13 @@ export function resolveBulkDelayOptions(dtoOptions?: SendBulkMessageDto['options
     delayBetweenMessages: dtoOptions?.delayBetweenMessages ?? (randomizeDelay ? 0 : 3000),
     randomizeDelay,
     stopOnError: dtoOptions?.stopOnError ?? false,
-    ...(dtoOptions?.pacingMode === 'blocks' ? {
-      pacingMode: 'blocks' as const,
-      blockSize: dtoOptions.blockSize,
-      blockDelaysMinutes: [...(dtoOptions.blockDelaysMinutes ?? [])],
-    } : {}),
+    ...(dtoOptions?.pacingMode === 'blocks'
+      ? {
+          pacingMode: 'blocks' as const,
+          blockSize: dtoOptions.blockSize,
+          blockDelaysMinutes: [...(dtoOptions.blockDelaysMinutes ?? [])],
+        }
+      : {}),
   };
 }
 
@@ -1158,10 +1163,18 @@ export function calculateBulkDelayMs(
   if (options.pacingMode === 'blocks') {
     const size = options.blockSize;
     const delays = options.blockDelaysMinutes;
-    if (!Number.isInteger(size) || !size || size < 1 || size > 100 ||
-        !Array.isArray(delays) || delays.length < 1 || delays.length > 10 ||
-        delays.some(n => !Number.isInteger(n) || n < 1 || n > 5) ||
-        !Number.isInteger(messageIndex) || messageIndex < 0) {
+    if (
+      !Number.isInteger(size) ||
+      !size ||
+      size < 1 ||
+      size > 100 ||
+      !Array.isArray(delays) ||
+      delays.length < 1 ||
+      delays.length > 10 ||
+      delays.some(n => !Number.isInteger(n) || n < 1 || n > 5) ||
+      !Number.isInteger(messageIndex) ||
+      messageIndex < 0
+    ) {
       throw new Error('Invalid block pacing options');
     }
     const step = Math.floor(messageIndex / size) % delays.length;
@@ -1173,4 +1186,3 @@ export function calculateBulkDelayMs(
   // Original explicit fixed-base delay (with the optional 0–2 second jitter).
   return options.delayBetweenMessages + (options.randomizeDelay ? random() * 2000 : 0);
 }
-
