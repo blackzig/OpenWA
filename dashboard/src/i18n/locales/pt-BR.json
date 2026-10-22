@@ -865,6 +865,22 @@
       "nextSendIn": "Próximo disparo em {{time}}",
       "nextSendPreparing": "Preparando o próximo disparo...",
       "lastSentAt": "Último envio aceito pela API: {{time}}"
+    },
+    "bulkPacing": {
+      "mode": "Como deseja calcular o intervalo entre disparos?",
+      "random": "Aleatório de 0 a 5 minutos (atual)",
+      "blocks": "Programado por grupos de números",
+      "custom": "Intervalo personalizado em milissegundos",
+      "randomHint": "Mantém o comportamento já instalado: cada pausa é sorteada independentemente entre 0 e 5 minutos.",
+      "size": "Mensagens por grupo",
+      "sequence": "Intervalos por grupo (minutos)",
+      "blocksHint": "Exemplo: 5 mensagens com pausas de 2 min, próximas 5 com 3 min, depois 4, 5 e 1 min. Após o último grupo, reinicia a sequência. Não há pausa após a última mensagem do lote.",
+      "customHint": "Valor de 1.000 a 60.000 ms, com variação de até 2 s, como no modo anterior.",
+      "errors": {
+        "invalidSize": "Informe um número inteiro de 1 a 100 mensagens por grupo.",
+        "invalidSequence": "Informe de 1 a 10 intervalos inteiros de 1 a 5 minutos, separados por vírgula.",
+        "invalidCustom": "Informe um intervalo inteiro de 1.000 a 60.000 ms."
+      }
     }
   },
   "templates": {
