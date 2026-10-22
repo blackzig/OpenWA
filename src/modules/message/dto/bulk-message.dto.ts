@@ -13,6 +13,8 @@ import {
   Min,
   Max,
   ArrayMaxSize,
+  ArrayMinSize,
+  IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Validate } from 'class-validator';
@@ -138,6 +140,41 @@ class BulkMessageItemDto {
 }
 
 class BulkMessageOptionsDto {
+  @ApiPropertyOptional({
+    enum: ['blocks'],
+    description:
+      'Optional alternative pacing: repeat blockDelaysMinutes across blocks of blockSize messages. Omit to preserve the default random 0–5 minute pacing.',
+  })
+  @IsOptional()
+  @IsIn(['blocks'])
+  pacingMode?: 'blocks';
+
+  @ApiPropertyOptional({
+    description: 'How many consecutive messages use each step in the block cycle.',
+    minimum: 1,
+    maximum: 100,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  blockSize?: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description: 'Sequence of fixed delays in minutes, each from 1 to 5. Cycles when all steps were used.',
+    minItems: 1,
+    maxItems: 10,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(5, { each: true })
+  blockDelaysMinutes?: number[];
+
   @ApiPropertyOptional({
     description: 'Delay between messages in ms.',
     default: 3000,

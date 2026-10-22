@@ -2227,3 +2227,47 @@ describe('Bulk message delay (client 0-5 minute requirement)', () => {
     expect(calculateBulkDelayMs({ delayBetweenMessages: 0, randomizeDelay: false })).toBe(0);
   });
 });
+
+
+describe('Opt-in block pacing (unchanged default random behavior)', () => {
+  const options = resolveBulkDelayOptions({
+    pacingMode: 'blocks',
+    blockSize: 5,
+    blockDelaysMinutes: [2, 3, 4, 5, 1],
+  });
+
+  it('persists the selected block schedule without replacing the random default', () => {
+    expect(options).toMatchObject({
+      pacingMode: 'blocks',
+      blockSize: 5,
+      blockDelaysMinutes: [2, 3, 4, 5, 1],
+    });
+    expect(resolveBulkDelayOptions(undefined).pacingMode).toBeUndefined();
+  });
+
+  it('uses one step for each group of five sends and repeats after 25 sends', () => {
+    const expectedMinutes = [2, 3, 4, 5, 1, 2];
+    for (let group = 0; group < expectedMinutes.length; group++) {
+      for (let offset = 0; offset < 5; offset++) {
+        const index = group * 5 + offset;
+        expect(calculateBulkDelayMs(options, () => 0.5, index)).toBe(expectedMinutes[group] * 60_000);
+      }
+    }
+  });
+
+  it('does not add random 0–2s jitter in the blocks mode', () => {
+    expect(calculateBulkDelayMs(options, () => 0, 0)).toBe(120_000);
+    expect(calculateBulkDelayMs(options, () => 0.9999, 0)).toBe(120_000);
+  });
+
+  it('rejects corrupted persisted block schedules instead of sending too quickly', () => {
+    expect(() => calculateBulkDelayMs({ ...options, blockSize: 0 })).toThrow('Invalid block pacing');
+    expect(() => calculateBulkDelayMs({ ...options, blockDelaysMinutes: [0, 6] })).toThrow('Invalid block pacing');
+    expect(() => calculateBulkDelayMs(options, () => 0.5, -1)).toThrow('Invalid block pacing');
+  });
+
+  it('still supports legacy custom delays and true 0–5 minute random pauses', () => {
+    expect(calculateBulkDelayMs(resolveBulkDelayOptions(), () => 0.5, 14)).toBe(150_000);
+    expect(calculateBulkDelayMs(resolveBulkDelayOptions({ delayBetweenMessages: 1500 }), () => 0.5, 14)).toBe(2500);
+  });
+});

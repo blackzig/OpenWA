@@ -343,6 +343,20 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     }
     // No explicit interval: choose a fresh random pause from 0 to 5 minutes between bulk items.
     // Explicit delayBetweenMessages retains the original fixed-base + 0-2s jitter behavior.
+    if (dto.options?.pacingMode === 'blocks') {
+      if (
+        !dto.options.blockSize ||
+        !dto.options.blockDelaysMinutes?.length ||
+        dto.options.delayBetweenMessages !== undefined ||
+        dto.options.randomizeDelay !== undefined
+      ) {
+        throw new BadRequestException(
+          'Block pacing requires blockSize and blockDelaysMinutes; do not combine with delayBetweenMessages/randomizeDelay',
+        );
+      }
+    } else if (dto.options?.blockSize !== undefined || dto.options?.blockDelaysMinutes !== undefined) {
+      throw new BadRequestException('Block pacing parameters require pacingMode=blocks');
+    }
     const options = resolveBulkDelayOptions(dto.options);
 
     const progress: BatchProgress = {
@@ -770,7 +784,7 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
 
     // Delay before next message (except for last)
     if (i < batch.messages.length - 1 && this.processingBatches.get(batch.id)) {
-      const delay = calculateBulkDelayMs(batch.options);
+      const delay = calculateBulkDelayMs(batch.options, Math.random, i);
       this.nextSendAt.set(batch.id, Date.now() + delay);
       try {
         await setTimeout(delay);
@@ -1100,9 +1114,8 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
         return Promise.reject(new Error(`Unsupported message type: ${type}`));
     }
   }
-
 }
- 
+
 /** Maximum pause between bulk messages when no interval was configured. */
 export const DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS = 300_000;
 
@@ -1110,25 +1123,66 @@ export function resolveBulkDelayOptions(dtoOptions?: SendBulkMessageDto['options
   delayBetweenMessages: number;
   randomizeDelay: boolean;
   stopOnError: boolean;
+  pacingMode?: 'blocks';
+  blockSize?: number;
+  blockDelaysMinutes?: number[];
 } {
   const randomizeDelay = dtoOptions?.randomizeDelay ?? true;
   return {
-    // Zero is an internal marker: the public DTO permits explicit values only from 1000 to 60000.
-    // Existing saved batches with 3000 + randomizeDelay stay unchanged after this upgrade.
+    // Zero remains an internal marker for the original 0–5 minute random mode.
     delayBetweenMessages: dtoOptions?.delayBetweenMessages ?? (randomizeDelay ? 0 : 3000),
     randomizeDelay,
     stopOnError: dtoOptions?.stopOnError ?? false,
+    ...(dtoOptions?.pacingMode === 'blocks'
+      ? {
+          pacingMode: 'blocks' as const,
+          blockSize: dtoOptions.blockSize,
+          blockDelaysMinutes: [...(dtoOptions.blockDelaysMinutes ?? [])],
+        }
+      : {}),
   };
 }
 
+/**
+ * Index i is the zero-based message just processed. The subsequent gap is assigned
+ * by the group containing that message: 0..4 -> first delay, 5..9 -> second.
+ * The caller never waits after the last message. Fixed block delays have no jitter;
+ * the default random and explicitly configured legacy modes stay unchanged.
+ */
 export function calculateBulkDelayMs(
-  options: { delayBetweenMessages: number; randomizeDelay: boolean },
+  options: {
+    delayBetweenMessages: number;
+    randomizeDelay: boolean;
+    pacingMode?: 'blocks';
+    blockSize?: number;
+    blockDelaysMinutes?: number[];
+  },
   random: () => number = Math.random,
+  messageIndex = 0,
 ): number {
+  if (options.pacingMode === 'blocks') {
+    const size = options.blockSize;
+    const delays = options.blockDelaysMinutes;
+    if (
+      !Number.isInteger(size) ||
+      !size ||
+      size < 1 ||
+      size > 100 ||
+      !Array.isArray(delays) ||
+      delays.length < 1 ||
+      delays.length > 10 ||
+      delays.some(n => !Number.isInteger(n) || n < 1 || n > 5) ||
+      !Number.isInteger(messageIndex) ||
+      messageIndex < 0
+    ) {
+      throw new Error('Invalid block pacing options');
+    }
+    const step = Math.floor(messageIndex / size) % delays.length;
+    return delays[step] * 60_000;
+  }
   if (options.randomizeDelay && options.delayBetweenMessages === 0) {
     return Math.floor(random() * (DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS + 1));
   }
-  // Explicitly configured intervals preserve OpenWA 0.25.0 semantics.
+  // Original explicit fixed-base delay (with the optional 0–2 second jitter).
   return options.delayBetweenMessages + (options.randomizeDelay ? random() * 2000 : 0);
 }
-

@@ -915,6 +915,22 @@
         "needVariations": "Enter at least two different messages.",
         "storageUnavailable": "The browser could not save the messages."
       }
+    },
+    "bulkPacing": {
+      "mode": "Comment calculer l'intervalle entre les envois ?",
+      "random": "Aléatoire de 0 à 5 minutes",
+      "blocks": "Cycle fixe par groupes",
+      "custom": "Délai personnalisé (ms)",
+      "randomHint": "Keeps the existing behavior: each gap is independently drawn from 0 to 5 minutes.",
+      "size": "Messages par groupe",
+      "sequence": "Délais par groupe (minutes)",
+      "blocksHint": "Example: 5 messages with a 2-minute gap, next 5 with 3 minutes, then 4, 5 and 1 minute. Repeats after the last group. There is no delay after the final message.",
+      "customHint": "From 1,000 to 60,000 ms with the original up to 2s jitter.",
+      "errors": {
+        "invalidSize": "Enter an integer between 1 and 100 messages per group.",
+        "invalidSequence": "Enter 1 to 10 integer delays of 1 to 5 minutes, separated by commas.",
+        "invalidCustom": "Enter an integer from 1,000 to 60,000 ms."
+      }
     }
   },
   "infrastructure": {
