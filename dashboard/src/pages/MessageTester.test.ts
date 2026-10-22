@@ -899,3 +899,46 @@ test('Brazilian time uses the São Paulo UTC-3 zone for midnight crossings', asy
   const { formatBrazilianDateTime } = await import('./MessageTester.tsx');
   assert.equal(formatBrazilianDateTime('2026-10-22T01:04:05.000Z'), '21/10/2026 às 22:04:05');
 });
+
+
+test('a manual bulk table sends one distinct text to each entered phone', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Message per recipient' }));
+  type(container, '#bulk-row-phone-initial-0', '5511999990001');
+  type(container, '#bulk-row-message-initial-0', 'Hello Maria');
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Add recipient' }));
+  type(container, '#bulk-row-phone-0', '5511999990002');
+  type(container, '#bulk-row-message-0', 'Hello Carlos');
+
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+
+  assert.deepEqual(
+    gateway.bulkBodies[0].messages.map(msg => [msg.chatId, (msg.content as { text: string }).text]),
+    [
+      ['5511999990001@c.us', 'Hello Maria'],
+      ['5511999990002@c.us', 'Hello Carlos'],
+    ],
+  );
+});
+
+test('randomized bulk preview matches the exact body submitted, with different consecutive texts', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
+  type(container, '#mt-11', '5511999990001\n5511999990002\n5511999990003');
+  type(container, '#bulk-variant-0', 'Variation A');
+  type(container, '#bulk-variant-1', 'Variation B');
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+
+  const preview = Array.from(container.querySelectorAll('.bulk-preview-item span:last-child')).map(el => el.textContent);
+  assert.equal(preview.length, 3);
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const sentTexts = gateway.bulkBodies[0].messages.map(msg => (msg.content as { text: string }).text);
+  assert.deepEqual(sentTexts, preview);
+  assert.notEqual(sentTexts[0], sentTexts[1]);
+  assert.notEqual(sentTexts[1], sentTexts[2]);
+});
