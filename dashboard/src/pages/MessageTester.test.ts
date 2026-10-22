@@ -51,7 +51,7 @@ afterEach(() => {
 interface BulkItem {
   chatId: string;
   type: string;
-  content: { caption?: string; image?: { base64?: string; mimetype?: string } };
+  content: { text?: string; caption?: string; image?: { base64?: string; mimetype?: string } };
 }
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -916,7 +916,7 @@ test('a manual bulk table sends one distinct text to each entered phone', async 
   await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
 
   assert.deepEqual(
-    gateway.bulkBodies[0].messages.map(msg => [msg.chatId, (msg.content as { text: string }).text]),
+    gateway.bulkBodies[0].messages.map(msg => [msg.chatId, msg.content.text]),
     [
       ['5511999990001@c.us', 'Hello Maria'],
       ['5511999990002@c.us', 'Hello Carlos'],
@@ -937,7 +937,7 @@ test('randomized bulk preview matches the exact body submitted, with different c
   assert.equal(preview.length, 3);
   rtl.fireEvent.click(sendButton());
   await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
-  const sentTexts = gateway.bulkBodies[0].messages.map(msg => (msg.content as { text: string }).text);
+  const sentTexts = gateway.bulkBodies[0].messages.map(msg => msg.content.text);
   assert.deepEqual(sentTexts, preview);
   assert.notEqual(sentTexts[0], sentTexts[1]);
   assert.notEqual(sentTexts[1], sentTexts[2]);
