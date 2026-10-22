@@ -942,3 +942,35 @@ test('randomized bulk preview matches the exact body submitted, with different c
   assert.notEqual(sentTexts[0], sentTexts[1]);
   assert.notEqual(sentTexts[1], sentTexts[2]);
 });
+
+
+test('opt-in 5-item block pacing sends exact settings without modifying recipients or content', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  type(container, '#mt-11', '5511999990001\n5511999990002');
+  type(container, '#mt-12', 'Authorized test message');
+  rtl.fireEvent.change(field(container, '#bulk-pacing-mode'), { target: { value: 'blocks' } });
+  type(container, '#bulk-block-size', '5');
+  type(container, '#bulk-block-sequence', '2,3,4,5,1');
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const body = gateway.bulkBodies[0] as { messages: BulkItem[]; options?: unknown };
+  assert.deepEqual(body.options, {
+    pacingMode: 'blocks', blockSize: 5, blockDelaysMinutes: [2, 3, 4, 5, 1],
+  });
+  assert.equal(body.messages.length, 2);
+  assert.deepEqual(body.messages.map(entry => entry.content.text), ['Authorized test message', 'Authorized test message']);
+});
+
+test('random pacing remains the default and submits no fixed delay options', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  type(container, '#mt-11', '5511999990001\n5511999990002');
+  type(container, '#mt-12', 'Authorized test message');
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const body = gateway.bulkBodies[0] as { messages: BulkItem[]; options?: unknown };
+  assert.equal(body.options, undefined);
+});
