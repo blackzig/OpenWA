@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useRef, type ChangeEvent } from 'react';
+import { Fragment, useState, useEffect, useRef, useMemo, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, CheckCircle, XCircle, Loader2, Upload, X, Plus, AlertCircle } from 'lucide-react';
 import {
@@ -8,6 +8,7 @@ import {
   type MessageResponse,
   type BatchStatus,
   type BatchStatusResponse,
+  type BulkMessageItem,
 } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useRole } from '../hooks/useRole';
@@ -28,6 +29,8 @@ import {
   type BulkMediaKind,
 } from '../utils/bulkMedia';
 import { PageHeader } from '../components/PageHeader';
+import { BulkComposeOptions } from '../components/BulkComposeOptions';
+import { buildPersonalizedBulkMessages, buildRandomizedBulkMessages, type BulkComposeMode, type PersonalizedRow } from '../utils/bulkPersonalization';
 import { GroupPicker } from '../components/GroupPicker';
 import { groupLabel, isGatewayRefusal, planGroupSend } from '../utils/groupSelection';
 import { sendSequentially } from '../utils/sendSequentially';
@@ -202,6 +205,9 @@ export function MessageTester() {
   const [forwardMessageId, setForwardMessageId] = useState('');
   const [bulkRecipients, setBulkRecipients] = useState('');
   const [bulkDelay, setBulkDelay] = useState('');
+  const [bulkMode, setBulkMode] = useState<BulkComposeMode>('same');
+  const [bulkPersonalizedRows, setBulkPersonalizedRows] = useState<PersonalizedRow[]>([{ id: 'initial-0', recipient: '', message: '' }]);
+  const [bulkVariations, setBulkVariations] = useState<string[]>(['', '']);
   const [bulkMediaKind, setBulkMediaKind] = useState<BulkMediaKind>('document');
   const [bulkMediaKindChosen, setBulkMediaKindChosen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -368,6 +374,20 @@ export function MessageTester() {
 
   const isMediaMessageType = mediaMessageTypes.includes(messageType);
   const bulkRecipientList = parseBulkRecipients(bulkRecipients);
+  // The exact preview payload is sent unchanged; an unrelated state update must not re-randomize it.
+  const bulkPrepared = useMemo((): { messages: BulkMessageItem[]; error: string | null } => {
+    try {
+      if (bulkMode === 'personalized') {
+        return { messages: buildPersonalizedBulkMessages(bulkPersonalizedRows), error: null };
+      }
+      if (bulkMode === 'random') {
+        return { messages: buildRandomizedBulkMessages(parseBulkRecipients(bulkRecipients), bulkVariations), error: null };
+      }
+      return { messages: [], error: null };
+    } catch (error) {
+      return { messages: [], error: error instanceof Error ? error.message : 'invalidCsv' };
+    }
+  }, [bulkMode, bulkPersonalizedRows, bulkRecipients, bulkVariations]);
   const pollOptionsFilled = pollOptions.map(o => o.trim()).filter(o => o.length > 0);
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
@@ -375,6 +395,7 @@ export function MessageTester() {
   const bulkAttachment = messageType === 'bulk' ? toBulkAttachment(bulkMediaKind, mediaFile, mediaUrl) : null;
   const bulkMediaTooLarge =
     messageType === 'bulk' &&
+    bulkMode === 'same' &&
     !!mediaFile &&
     mediaFile.base64.length * bulkRecipientList.length > BULK_INLINE_MEDIA_MAX_BYTES;
   // The gateway reads a media string as a URL only with an http(s) prefix and decodes anything else as
@@ -428,16 +449,13 @@ export function MessageTester() {
   } else if (messageType === 'forward') {
     formValid = forwardTo.trim().length > 0 && forwardMessageId.trim().length > 0;
   } else if (messageType === 'bulk') {
-    formValid =
-      (content.trim().length > 0 || bulkAttachment !== null) &&
-      !bulkMediaTooLarge &&
-      !mediaUrlInvalid &&
-      !bulkAudioWithText &&
-      !bulkCaptionTooLong &&
-      !bulkTextTooLong &&
-      bulkRecipientList.length > 0 &&
-      bulkRecipientList.length <= BULK_MAX_RECIPIENTS &&
-      (delayMs === undefined || (!Number.isNaN(delayMs) && delayMs >= 1000 && delayMs <= 60000));
+    const delayValid = delayMs === undefined || (!Number.isNaN(delayMs) && delayMs >= 1000 && delayMs <= 60000);
+    formValid = bulkMode === 'same'
+      ? (content.trim().length > 0 || bulkAttachment !== null) &&
+        !bulkMediaTooLarge && !mediaUrlInvalid && !bulkAudioWithText && !bulkCaptionTooLong &&
+        !bulkTextTooLong && bulkRecipientList.length > 0 &&
+        bulkRecipientList.length <= BULK_MAX_RECIPIENTS && delayValid
+      : bulkPrepared.error === null && bulkPrepared.messages.length > 0 && delayValid;
   }
 
   // A new send replaces the batch on screen, so it waits for an in-flight cancel: the cancel's answer
@@ -539,7 +557,7 @@ export function MessageTester() {
       // Bulk is a batch, not a single send: 202 + batchId, then poll progress until terminal.
       if (messageType === 'bulk') {
         const batch = await messageApi.sendBulk(session, {
-          messages: buildBulkMessages(bulkRecipientList, content, bulkAttachment),
+          messages: bulkMode === 'same' ? buildBulkMessages(bulkRecipientList, content, bulkAttachment) : bulkPrepared.messages,
           ...(delayMs !== undefined ? { options: { delayBetweenMessages: delayMs } } : {}),
         });
         batchSessionRef.current = session;
@@ -1098,6 +1116,18 @@ export function MessageTester() {
 
             {messageType === 'bulk' && (
               <>
+                <BulkComposeOptions
+                  mode={bulkMode}
+                  onModeChange={setBulkMode}
+                  rows={bulkPersonalizedRows}
+                  onRowsChange={setBulkPersonalizedRows}
+                  variations={bulkVariations}
+                  onVariationsChange={setBulkVariations}
+                  preview={bulkPrepared.messages}
+                  error={bulkPrepared.error}
+                  canWrite={canWrite}
+                />
+                {bulkMode !== 'personalized' && (
                 <div className="form-group">
                   <div
                     style={{
@@ -1133,6 +1163,8 @@ export function MessageTester() {
                     {t('messageTester.bulkRecipientsCount', { count: bulkRecipientList.length })}
                   </span>
                 </div>
+                )}
+                {bulkMode === 'same' && (
                 <div className="form-group">
                   <label htmlFor="mt-12">{t('messageTester.messageContent')}</label>
                   <textarea
@@ -1155,8 +1187,9 @@ export function MessageTester() {
                           : ''}
                   </span>
                 </div>
-                {mediaSourceFields}
-                {bulkAttachment && (
+                )}
+                {bulkMode === 'same' && mediaSourceFields}
+                {bulkMode === 'same' && bulkAttachment && (
                   <div className="form-group">
                     <span className="group-label" id="bulk-media-kind-label">
                       {t('messageTester.bulkMediaKind')}

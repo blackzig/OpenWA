@@ -629,3 +629,84 @@
   margin: 0;
   min-width: 0;
 }
+
+/* Bulk personalization: responsive, inspectable before any message is sent. */
+.message-tester .bulk-compose-options {
+  margin-bottom: 1.25rem;
+}
+.message-tester .bulk-mode-options,
+.message-tester .bulk-mode-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.message-tester .bulk-mode-options button {
+  flex: 1 1 160px;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-white);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.message-tester .bulk-mode-options button.active {
+  background: var(--primary);
+  color: white;
+}
+.message-tester .bulk-personalized-rows {
+  max-height: 450px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+}
+.message-tester .bulk-personalized-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(180px, 2fr) auto;
+  align-items: start;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+}
+.message-tester .bulk-personalized-row textarea,
+.message-tester .bulk-variation textarea {
+  min-height: 66px;
+}
+.message-tester .bulk-variation {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.5rem;
+  align-items: start;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.message-tester .bulk-variation label {
+  grid-column: 1 / -1;
+}
+.message-tester .bulk-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  margin: 1rem 0;
+}
+.message-tester .bulk-preview-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+.message-tester .bulk-preview-item {
+  display: grid;
+  grid-template-columns: minmax(135px, 1fr) minmax(180px, 2fr);
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+}
+.message-tester .bulk-preview-item span:last-child {
+  white-space: pre-wrap;
+}
+@media (max-width: 700px) {
+  .message-tester .bulk-personalized-row,
+  .message-tester .bulk-preview-item {
+    grid-template-columns: 1fr;
+  }
+}
