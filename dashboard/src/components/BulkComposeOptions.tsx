@@ -54,9 +54,10 @@ export function BulkComposeOptions({
   const syncAttachmentBusy = () => onAttachmentBusyChange(readers.current.size > 0);
 
   useEffect(() => {
+    const activeReaders = readers.current;
     return () => {
-      for (const reader of readers.current.values()) reader.abort();
-      readers.current.clear();
+      for (const reader of activeReaders.values()) reader.abort();
+      activeReaders.clear();
     };
   }, []);
 
@@ -352,7 +353,14 @@ export function BulkComposeOptions({
           </div>
           <span className="hint">{t('messageTester.bulkPersonalization.browserOnly')}</span>
           <span className="hint">{t('messageTester.bulkPersonalization.attachmentHint')}</span>
-          {attachmentError && <span className="hint error" role="alert">{attachmentError}</span>}
+          {attachmentError && (
+            <div className="bulk-variation-attachment">
+              <span className="hint error" role="alert">{attachmentError}</span>
+              <button type="button" className="browse-btn" onClick={() => showAttachmentError('')}>
+                {t('messageTester.bulkPersonalization.removeAttachment')}
+              </button>
+            </div>
+          )}
           {saveMessage && <span className="hint" role="status">{saveMessage}</span>}
         </div>
       )}
