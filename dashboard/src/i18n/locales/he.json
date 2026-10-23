@@ -900,12 +900,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "צרף קובץ להודעה זו",
+      "removeAttachment": "הסר קובץ מצורף",
+      "attachmentHint": "לכל הודעה אקראית יכול להיות קובץ מצורף משלה. הטקסט ישמש כתיאור לתמונה, לסרטון או למסמך (עד 1,024 תווים). הקבצים אינם נשמרים ויש לבחור אותם שוב לאחר רענון.",
+      "attachmentFileTooLarge": "יש לבחור קובץ שאינו ריק עד 18 MB.",
+      "attachmentAudioUnsupported": "שמע אינו תומך בכיתוב במצב זה. השתמש בתמונה, בסרטון או במסמך.",
+      "attachmentReadError": "לא ניתן לקרוא את הקובץ המצורף.",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "הודעה לפי נמען שולחת טקסט בלבד; הודעות אקראיות מאפשרות קבצים מצורפים.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -920,6 +926,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "הקבצים המצורפים חורגים ממגבלת 24 MB כאשר הם חוזרים לכל נמען. השתמש בקבצים קטנים יותר או בפחות נמענים.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },
