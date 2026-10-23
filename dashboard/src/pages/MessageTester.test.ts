@@ -944,6 +944,54 @@ test('randomized bulk preview matches the exact body submitted, with different c
 });
 
 
+test('random bulk sends each selected image with its matching text caption', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
+  type(container, '#mt-11', '5511999990001\\n5511999990002\\n5511999990003');
+  type(container, '#bulk-variant-0', 'Photo one');
+  type(container, '#bulk-variant-1', 'Photo two');
+
+  rtl.fireEvent.change(field(container, '#bulk-variant-file-0'), {
+    target: { files: [new window.File(['image-one'], 'one.png', { type: 'image/png' })] },
+  });
+  await rtl.screen.findByText(/one.png/);
+  rtl.fireEvent.change(field(container, '#bulk-variant-file-1'), {
+    target: { files: [new window.File(['image-two'], 'two.png', { type: 'image/png' })] },
+  });
+  await rtl.screen.findByText(/two.png/);
+
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const messages = gateway.bulkBodies[0].messages;
+  assert.equal(messages.length, 3);
+  assert.ok(messages.every(item => item.type === 'image'));
+  assert.ok(messages.every(item => item.content.image?.base64));
+  for (const message of messages) {
+    const data = Buffer.from(message.content.image!.base64!, 'base64').toString('utf8');
+    assert.equal(data, message.content.caption === 'Photo one' ? 'image-one' : 'image-two');
+  }
+  assert.notEqual(messages[0].content.caption, messages[1].content.caption);
+});
+
+test('random bulk refuses inline images repeated beyond the batch body budget', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
+  type(container, '#mt-11', Array.from({ length: 40 }, (_, i) => `551199999${String(i + 1).padStart(4, '0')}`).join('\\n'));
+  type(container, '#bulk-variant-0', 'Image');
+  type(container, '#bulk-variant-1', 'Plain text');
+
+  rtl.fireEvent.change(field(container, '#bulk-variant-file-0'), {
+    target: { files: [new window.File([new Uint8Array(1100000)], 'big.png', { type: 'image/png' })] },
+  });
+  await rtl.screen.findByText(/big.png/);
+  await rtl.screen.findByText(/total attachments exceed the 24 MB batch request limit/);
+  assert.equal(sendButton().disabled, true);
+  assert.equal(gateway.bulkBodies.length, 0);
+});
+
 test('opt-in 5-item block pacing sends exact settings without modifying recipients or content', async () => {
   const gateway = stubGateway();
   const container = await renderBulkAsWriter();
