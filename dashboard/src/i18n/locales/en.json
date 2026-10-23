@@ -842,12 +842,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "Attach a file to this message",
+      "removeAttachment": "Remove attachment",
+      "attachmentHint": "Each random message may have its own attachment. Text becomes the image, video or document caption (max 1,024 characters). Files are not saved in the browser: select them again after a refresh. Use small images for many recipients.",
+      "attachmentFileTooLarge": "Select a nonempty file up to 18 MB. Use smaller files for many recipients.",
+      "attachmentAudioUnsupported": "Audio does not support captions in this mode. Use an image, video or document with the text.",
+      "attachmentReadError": "Could not read the attachment. Select the file again.",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "Message per recipient sends text only; each random variation can now have its own attachment.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -862,6 +868,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "The total attachments exceed the 24 MB batch request limit when repeated per recipient. Use smaller files or fewer recipients.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },
