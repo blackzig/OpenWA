@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BulkMessageItem } from '../services/api';
+import { BULK_CAPTION_MAX_LENGTH, captionLength } from '../utils/bulkMedia';
 import {
   MAX_BULK_PERSONALIZED,
   MAX_BULK_VARIATIONS,
@@ -31,6 +32,7 @@ type Props = {
 };
 
 function errorText(t: (key: string) => string, code: string): string {
+  if (code === 'audioCaptionUnsupported') return t('messageTester.bulkPersonalization.attachmentAudioUnsupported');
   const key = 'messageTester.bulkPersonalization.errors.' + code;
   return t(key);
 }
@@ -289,6 +291,13 @@ export function BulkComposeOptions({
                 disabled={!canWrite}
                 onChange={event => onVariationsChange(variations.map((item, i) => i === index ? event.target.value : item))}
               />
+              {variationFiles[index] && captionLength(value) > BULK_CAPTION_MAX_LENGTH && (
+                <span className="hint error" role="alert">
+                  {t('messageTester.bulkCaptionTooLong', {
+                    max: BULK_CAPTION_MAX_LENGTH, count: captionLength(value),
+                  })}
+                </span>
+              )}
               <div className="bulk-variation-attachment">
                 <label htmlFor={`bulk-variant-file-${index}`}>
                   {t('messageTester.bulkPersonalization.attachment')}
@@ -368,7 +377,7 @@ export function BulkComposeOptions({
       {mode !== 'same' && (
         <>
           {mode === 'personalized' && <p className="hint">{t('messageTester.bulkPersonalization.textOnly')}</p>}
-          {error && <p className="hint error" role="alert">{errorText(t, error)}</p>}
+          {error && error !== 'captionTooLong' && <p className="hint error" role="alert">{errorText(t, error)}</p>}
           {!!preview.length && (
             <div className="bulk-preview">
               <strong>{t('messageTester.bulkPersonalization.preview', { count: preview.length })}</strong>
