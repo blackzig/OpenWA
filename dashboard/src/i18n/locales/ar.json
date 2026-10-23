@@ -912,12 +912,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "إرفاق ملف بهذه الرسالة",
+      "removeAttachment": "إزالة المرفق",
+      "attachmentHint": "يمكن أن يكون لكل رسالة عشوائية مرفق مختلف. يصبح النص وصفًا للصورة أو الفيديو أو المستند (حتى 1024 حرف). لا تُحفظ الملفات؛ أعد اختيارها بعد التحديث.",
+      "attachmentFileTooLarge": "اختر ملفًا غير فارغ بحجم لا يزيد عن 18 ميغابايت.",
+      "attachmentAudioUnsupported": "الصوت لا يدعم الوصف في هذا الوضع. استخدم صورة أو فيديو أو مستندًا.",
+      "attachmentReadError": "تعذرت قراءة المرفق.",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "وضع الرسالة لكل مستلم يرسل النص فقط؛ الرسائل العشوائية تدعم مرفقات منفصلة.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -932,6 +938,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "تتجاوز المرفقات حد 24 ميغابايت عند تكرارها لكل مستلم. استخدم ملفات أصغر أو مستلمين أقل.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },
