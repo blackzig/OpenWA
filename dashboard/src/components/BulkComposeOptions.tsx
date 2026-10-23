@@ -23,6 +23,8 @@ type Props = {
   onVariationsChange: (next: string[]) => void;
   variationFiles: (VariationFile | null)[];
   onVariationFilesChange: Dispatch<SetStateAction<(VariationFile | null)[]>>;
+  onAttachmentBusyChange: (busy: boolean) => void;
+  onAttachmentErrorChange: (error: boolean) => void;
   preview: BulkMessageItem[];
   error: string | null;
   canWrite: boolean;
@@ -35,7 +37,8 @@ function errorText(t: (key: string) => string, code: string): string {
 
 export function BulkComposeOptions({
   mode, onModeChange, rows, onRowsChange, variations, onVariationsChange,
-  variationFiles, onVariationFilesChange, preview, error, canWrite,
+  variationFiles, onVariationFilesChange, onAttachmentBusyChange, onAttachmentErrorChange,
+  preview, error, canWrite,
 }: Props) {
   const { t } = useTranslation();
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +47,11 @@ export function BulkComposeOptions({
   const [saveMessage, setSaveMessage] = useState('');
   const [attachmentError, setAttachmentError] = useState('');
   const readers = useRef(new Map<number, FileReader>());
+  const showAttachmentError = (message: string) => {
+    setAttachmentError(message);
+    onAttachmentErrorChange(Boolean(message));
+  };
+  const syncAttachmentBusy = () => onAttachmentBusyChange(readers.current.size > 0);
 
   useEffect(() => {
     return () => {
@@ -58,13 +66,19 @@ export function BulkComposeOptions({
     if (!file) return;
     readers.current.get(index)?.abort();
     readers.current.delete(index);
-    setAttachmentError('');
+    syncAttachmentBusy();
+    onVariationFilesChange(previous => {
+      const next = [...previous];
+      next[index] = null;
+      return next;
+    });
+    showAttachmentError('');
     if (!file.size || file.size > VARIATION_FILE_MAX_BYTES) {
-      setAttachmentError(t('messageTester.bulkPersonalization.attachmentFileTooLarge'));
+      showAttachmentError(t('messageTester.bulkPersonalization.attachmentFileTooLarge'));
       return;
     }
     if (file.type.toLowerCase().startsWith('audio/')) {
-      setAttachmentError(t('messageTester.bulkPersonalization.attachmentAudioUnsupported'));
+      showAttachmentError(t('messageTester.bulkPersonalization.attachmentAudioUnsupported'));
       return;
     }
     const mimetype = file.type || (
@@ -76,13 +90,15 @@ export function BulkComposeOptions({
     );
     const reader = new FileReader();
     readers.current.set(index, reader);
+    syncAttachmentBusy();
     reader.onload = () => {
       if (readers.current.get(index) !== reader) return;
       readers.current.delete(index);
+      syncAttachmentBusy();
       const result = typeof reader.result === 'string' ? reader.result : '';
       const base64 = result.includes(',') ? result.split(',')[1] : '';
       if (!base64) {
-        setAttachmentError(t('messageTester.bulkPersonalization.attachmentReadError'));
+        showAttachmentError(t('messageTester.bulkPersonalization.attachmentReadError'));
         return;
       }
       onVariationFilesChange(previous => {
@@ -94,7 +110,8 @@ export function BulkComposeOptions({
     reader.onerror = () => {
       if (readers.current.get(index) !== reader) return;
       readers.current.delete(index);
-      setAttachmentError(t('messageTester.bulkPersonalization.attachmentReadError'));
+      syncAttachmentBusy();
+      showAttachmentError(t('messageTester.bulkPersonalization.attachmentReadError'));
     };
     reader.readAsDataURL(file);
   };
@@ -103,9 +120,10 @@ export function BulkComposeOptions({
     // Indexes shift when deleting entries. Cancel pending reads to prevent misassignment.
     for (const reader of readers.current.values()) reader.abort();
     readers.current.clear();
+    syncAttachmentBusy();
+    showAttachmentError('');
     onVariationFilesChange(previous => previous.filter((_, i) => i !== index));
     onVariationsChange(variations.filter((_, i) => i !== index));
-    setAttachmentError('');
   };
 
   useEffect(() => {
@@ -289,11 +307,14 @@ export function BulkComposeOptions({
                       type="button"
                       className="browse-btn"
                       disabled={!canWrite}
-                      onClick={() => onVariationFilesChange(previous => {
-                        const next = [...previous];
-                        next[index] = null;
-                        return next;
-                      })}
+                      onClick={() => {
+                        onVariationFilesChange(previous => {
+                          const next = [...previous];
+                          next[index] = null;
+                          return next;
+                        });
+                        showAttachmentError('');
+                      }}
                     >
                       {t('messageTester.bulkPersonalization.removeAttachment')}
                     </button>
