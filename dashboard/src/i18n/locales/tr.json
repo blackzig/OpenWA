@@ -887,12 +887,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "Bu mesaja dosya ekle",
+      "removeAttachment": "Eki kaldır",
+      "attachmentHint": "Her rastgele mesaja ayrı dosya eklenebilir. Metin, görsel, video veya belge açıklaması olarak gönderilir (en fazla 1.024 karakter). Dosyalar kaydedilmez; yenilemeden sonra yeniden seçin.",
+      "attachmentFileTooLarge": "En fazla 18 MB boyutunda boş olmayan dosya seçin.",
+      "attachmentAudioUnsupported": "Bu modda ses dosyaları açıklama desteklemez. Görsel, video veya belge kullanın.",
+      "attachmentReadError": "Ek okunamadı.",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "Alıcı başına mod yalnızca metin gönderir; rastgele mesajlarda ayrı ekler olabilir.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -907,6 +913,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "Ekler alıcı başına tekrarlandığında 24 MB sınırını aşıyor. Daha küçük dosya veya daha az alıcı kullanın.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },
