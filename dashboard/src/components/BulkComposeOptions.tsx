@@ -68,11 +68,11 @@ export function BulkComposeOptions({
       return;
     }
     const mimetype = file.type || (
-      /\\.jpe?g$/i.test(file.name) ? 'image/jpeg' :
-      /\\.png$/i.test(file.name) ? 'image/png' :
-      /\\.webp$/i.test(file.name) ? 'image/webp' :
-      /\\.gif$/i.test(file.name) ? 'image/gif' :
-      /\\.mp4$/i.test(file.name) ? 'video/mp4' : 'application/octet-stream'
+      /\.jpe?g$/i.test(file.name) ? 'image/jpeg' :
+      /\.png$/i.test(file.name) ? 'image/png' :
+      /\.webp$/i.test(file.name) ? 'image/webp' :
+      /\.gif$/i.test(file.name) ? 'image/gif' :
+      /\.mp4$/i.test(file.name) ? 'video/mp4' : 'application/octet-stream'
     );
     const reader = new FileReader();
     readers.current.set(index, reader);
