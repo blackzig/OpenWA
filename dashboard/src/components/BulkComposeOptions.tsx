@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BulkMessageItem } from '../services/api';
 import {
@@ -11,6 +11,8 @@ import {
 } from '../utils/bulkPersonalization';
 
 const STORAGE_KEY = 'openwa.bulk.text-variations.v1';
+const VARIATION_FILE_MAX_BYTES = 18 * 1024 * 1024;
+type VariationFile = { base64: string; mimetype: string; filename: string };
 
 type Props = {
   mode: BulkComposeMode;
@@ -19,6 +21,8 @@ type Props = {
   onRowsChange: (rows: PersonalizedRow[]) => void;
   variations: string[];
   onVariationsChange: (next: string[]) => void;
+  variationFiles: (VariationFile | null)[];
+  onVariationFilesChange: Dispatch<SetStateAction<(VariationFile | null)[]>>;
   preview: BulkMessageItem[];
   error: string | null;
   canWrite: boolean;
@@ -31,13 +35,78 @@ function errorText(t: (key: string) => string, code: string): string {
 
 export function BulkComposeOptions({
   mode, onModeChange, rows, onRowsChange, variations, onVariationsChange,
-  preview, error, canWrite,
+  variationFiles, onVariationFilesChange, preview, error, canWrite,
 }: Props) {
   const { t } = useTranslation();
   const csvInputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState('');
+  const [attachmentError, setAttachmentError] = useState('');
+  const readers = useRef(new Map<number, FileReader>());
+
+  useEffect(() => {
+    return () => {
+      for (const reader of readers.current.values()) reader.abort();
+      readers.current.clear();
+    };
+  }, []);
+
+  const pickVariationFile = (event: ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow reselecting the same file
+    if (!file) return;
+    readers.current.get(index)?.abort();
+    readers.current.delete(index);
+    setAttachmentError('');
+    if (!file.size || file.size > VARIATION_FILE_MAX_BYTES) {
+      setAttachmentError(t('messageTester.bulkPersonalization.attachmentFileTooLarge'));
+      return;
+    }
+    if (file.type.toLowerCase().startsWith('audio/')) {
+      setAttachmentError(t('messageTester.bulkPersonalization.attachmentAudioUnsupported'));
+      return;
+    }
+    const mimetype = file.type || (
+      /\\.jpe?g$/i.test(file.name) ? 'image/jpeg' :
+      /\\.png$/i.test(file.name) ? 'image/png' :
+      /\\.webp$/i.test(file.name) ? 'image/webp' :
+      /\\.gif$/i.test(file.name) ? 'image/gif' :
+      /\\.mp4$/i.test(file.name) ? 'video/mp4' : 'application/octet-stream'
+    );
+    const reader = new FileReader();
+    readers.current.set(index, reader);
+    reader.onload = () => {
+      if (readers.current.get(index) !== reader) return;
+      readers.current.delete(index);
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const base64 = result.includes(',') ? result.split(',')[1] : '';
+      if (!base64) {
+        setAttachmentError(t('messageTester.bulkPersonalization.attachmentReadError'));
+        return;
+      }
+      onVariationFilesChange(previous => {
+        const next = [...previous];
+        next[index] = { base64, mimetype, filename: file.name };
+        return next;
+      });
+    };
+    reader.onerror = () => {
+      if (readers.current.get(index) !== reader) return;
+      readers.current.delete(index);
+      setAttachmentError(t('messageTester.bulkPersonalization.attachmentReadError'));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeVariation = (index: number) => {
+    // Indexes shift when deleting entries. Cancel pending reads to prevent misassignment.
+    for (const reader of readers.current.values()) reader.abort();
+    readers.current.clear();
+    onVariationFilesChange(previous => previous.filter((_, i) => i !== index));
+    onVariationsChange(variations.filter((_, i) => i !== index));
+    setAttachmentError('');
+  };
 
   useEffect(() => {
     try {
@@ -201,11 +270,41 @@ export function BulkComposeOptions({
                 disabled={!canWrite}
                 onChange={event => onVariationsChange(variations.map((item, i) => i === index ? event.target.value : item))}
               />
+              <div className="bulk-variation-attachment">
+                <label htmlFor={`bulk-variant-file-${index}`}>
+                  {t('messageTester.bulkPersonalization.attachment')}
+                </label>
+                <input
+                  id={`bulk-variant-file-${index}`}
+                  type="file"
+                  accept="image/*,video/*,.pdf,.doc,.docx,.txt,.csv,.xlsx"
+                  disabled={!canWrite}
+                  onChange={event => pickVariationFile(event, index)}
+                />
+                {variationFiles[index] && (
+                  <span className="hint">
+                    {variationFiles[index]?.filename}
+                    {' '}
+                    <button
+                      type="button"
+                      className="browse-btn"
+                      disabled={!canWrite}
+                      onClick={() => onVariationFilesChange(previous => {
+                        const next = [...previous];
+                        next[index] = null;
+                        return next;
+                      })}
+                    >
+                      {t('messageTester.bulkPersonalization.removeAttachment')}
+                    </button>
+                  </span>
+                )}
+              </div>
               <button
                 type="button"
                 className="browse-btn"
                 disabled={!canWrite || variations.length <= 2}
-                onClick={() => onVariationsChange(variations.filter((_, i) => i !== index))}
+                onClick={() => removeVariation(index)}
               >
                 {t('messageTester.bulkPersonalization.remove')}
               </button>
@@ -216,7 +315,10 @@ export function BulkComposeOptions({
               type="button"
               className="browse-btn"
               disabled={!canWrite || variations.length >= MAX_BULK_VARIATIONS}
-              onClick={() => onVariationsChange([...variations, ''])}
+              onClick={() => {
+                onVariationsChange([...variations, '']);
+                onVariationFilesChange(previous => [...previous, null]);
+              }}
             >
               {t('messageTester.bulkPersonalization.addVariation')}
             </button>
@@ -228,13 +330,15 @@ export function BulkComposeOptions({
             </button>
           </div>
           <span className="hint">{t('messageTester.bulkPersonalization.browserOnly')}</span>
+          <span className="hint">{t('messageTester.bulkPersonalization.attachmentHint')}</span>
+          {attachmentError && <span className="hint error" role="alert">{attachmentError}</span>}
           {saveMessage && <span className="hint" role="status">{saveMessage}</span>}
         </div>
       )}
 
       {mode !== 'same' && (
         <>
-          <p className="hint">{t('messageTester.bulkPersonalization.textOnly')}</p>
+          {mode === 'personalized' && <p className="hint">{t('messageTester.bulkPersonalization.textOnly')}</p>}
           {error && <p className="hint error" role="alert">{errorText(t, error)}</p>}
           {!!preview.length && (
             <div className="bulk-preview">
@@ -243,7 +347,7 @@ export function BulkComposeOptions({
                 {preview.slice(0, 10).map((item, index) => (
                   <div className="bulk-preview-item" key={index}>
                     <span>{index + 1}. {item.chatId}</span>
-                    <span>{item.content.text}</span>
+                    <span>{item.content.text ?? item.content.caption}{item.type !== 'text' ? ` [${item.type}]` : ''}</span>
                   </div>
                 ))}
               </div>
