@@ -887,12 +887,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "Datei an diese Nachricht anhängen",
+      "removeAttachment": "Anhang entfernen",
+      "attachmentHint": "Jede Zufallsnachricht kann einen eigenen Anhang haben. Text wird als Bild-, Video- oder Dokumentunterschrift gesendet (max. 1.024 Zeichen). Dateien werden nicht gespeichert und müssen nach dem Neuladen erneut ausgewählt werden.",
+      "attachmentFileTooLarge": "Wähle eine nicht leere Datei bis 18 MB.",
+      "attachmentAudioUnsupported": "Audio unterstützt hier keine Bildunterschrift. Verwende Bild, Video oder Dokument.",
+      "attachmentReadError": "Anhang konnte nicht gelesen werden.",
       "save": "In diesem Browser speichern",
       "clear": "Gespeicherte löschen",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "Nachricht pro Empfänger sendet nur Text; Zufallsnachrichten können Anhänge enthalten.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -907,6 +913,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "Anhänge überschreiten bei Wiederholung pro Empfänger das 24-MB-Limit. Kleinere Dateien oder weniger Empfänger verwenden.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },
