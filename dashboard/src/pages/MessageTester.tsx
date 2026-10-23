@@ -217,6 +217,8 @@ export function MessageTester() {
   const [bulkVariationFiles, setBulkVariationFiles] = useState<
     ({ base64: string; mimetype: string; filename: string } | null)[]
   >([null, null]);
+  const [bulkVariationUploadPending, setBulkVariationUploadPending] = useState(false);
+  const [bulkVariationUploadError, setBulkVariationUploadError] = useState(false);
   const [bulkMediaKind, setBulkMediaKind] = useState<BulkMediaKind>('document');
   const [bulkMediaKindChosen, setBulkMediaKindChosen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -486,7 +488,8 @@ export function MessageTester() {
         !bulkTextTooLong && bulkRecipientList.length > 0 &&
         bulkRecipientList.length <= BULK_MAX_RECIPIENTS && delayValid
       : bulkPrepared.error === null && bulkPrepared.messages.length > 0 &&
-        !(bulkMode === 'random' && bulkRandomInlineTooLarge) && delayValid;
+        !(bulkMode === 'random' &&
+          (bulkRandomInlineTooLarge || bulkVariationUploadPending || bulkVariationUploadError)) && delayValid;
   }
 
   // A new send replaces the batch on screen, so it waits for an in-flight cancel: the cancel's answer
@@ -1156,6 +1159,8 @@ export function MessageTester() {
                   onVariationsChange={setBulkVariations}
                   variationFiles={bulkVariationFiles}
                   onVariationFilesChange={setBulkVariationFiles}
+                  onAttachmentBusyChange={setBulkVariationUploadPending}
+                  onAttachmentErrorChange={setBulkVariationUploadError}
                   preview={bulkPrepared.messages}
                   error={bulkPrepared.error ?? (bulkRandomInlineTooLarge ? 'inlineMediaTooLarge' : null)}
                   canWrite={canWrite}
