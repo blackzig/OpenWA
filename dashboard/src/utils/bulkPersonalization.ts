@@ -1,5 +1,5 @@
 import type { BulkMessageItem } from '../services/api';
-import { BULK_CAPTION_MAX_LENGTH, buildBulkMessages, captionLength, type BulkAttachment } from './bulkMedia';
+import { BULK_CAPTION_MAX_LENGTH, buildBulkMessages, captionLength, type BulkAttachment } from './bulkMedia.ts';
 
 export type PersonalizedRow = { id: string; recipient: string; message: string };
 export type BulkComposeMode = 'same' | 'personalized' | 'random';
