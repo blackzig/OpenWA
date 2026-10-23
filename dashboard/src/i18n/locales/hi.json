@@ -887,12 +887,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "इस संदेश में फ़ाइल जोड़ें",
+      "removeAttachment": "अटैचमेंट हटाएँ",
+      "attachmentHint": "हर यादृच्छिक संदेश का अलग अटैचमेंट हो सकता है। पाठ चित्र, वीडियो या दस्तावेज़ का कैप्शन बनेगा (अधिकतम 1,024 अक्षर)। फ़ाइलें सहेजी नहीं जातीं; पेज रीफ़्रेश के बाद दोबारा चुनें।",
+      "attachmentFileTooLarge": "18 MB तक की खाली न होने वाली फ़ाइल चुनें।",
+      "attachmentAudioUnsupported": "इस मोड में ऑडियो कैप्शन नहीं भेजता। चित्र, वीडियो या दस्तावेज़ चुनें।",
+      "attachmentReadError": "अटैचमेंट नहीं पढ़ा जा सका।",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "प्रत्येक प्राप्तकर्ता मोड केवल पाठ भेजता है; यादृच्छिक संदेश अलग अटैचमेंट भेज सकते हैं।",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -907,6 +913,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "प्रत्येक प्राप्तकर्ता के लिए दोहराने पर अटैचमेंट 24 MB सीमा पार कर जाते हैं। छोटी फ़ाइलें या कम प्राप्तकर्ता चुनें।",
         "storageUnavailable": "The browser could not save the messages."
       }
     },

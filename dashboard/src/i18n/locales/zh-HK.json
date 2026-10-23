@@ -887,12 +887,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "為此訊息新增附件",
+      "removeAttachment": "移除附件",
+      "attachmentHint": "每條隨機訊息可使用不同附件。文字會作為圖片、影片或文件說明（最多 1024 字元）。檔案不會儲存，重新整理後需再次選取。",
+      "attachmentFileTooLarge": "請選取不超過 18 MB 的非空檔案。",
+      "attachmentAudioUnsupported": "此模式下音訊不支援說明文字。請使用圖片、影片或文件。",
+      "attachmentReadError": "無法讀取附件。",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "按收件者發送僅支援文字；隨機訊息可使用獨立附件。",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -907,6 +913,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "附件按收件者重複後超過每批 24 MB 限制。請縮小檔案或減少收件者。",
         "storageUnavailable": "The browser could not save the messages."
       }
     },

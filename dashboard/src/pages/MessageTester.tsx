@@ -212,6 +212,13 @@ export function MessageTester() {
   const [bulkMode, setBulkMode] = useState<BulkComposeMode>('same');
   const [bulkPersonalizedRows, setBulkPersonalizedRows] = useState<PersonalizedRow[]>([{ id: 'initial-0', recipient: '', message: '' }]);
   const [bulkVariations, setBulkVariations] = useState<string[]>(['', '']);
+  // Files are deliberately kept in memory only. Saved variation TEXT remains browser-local;
+  // attachments must be selected again after a refresh (never persist sensitive media in storage).
+  const [bulkVariationFiles, setBulkVariationFiles] = useState<
+    ({ base64: string; mimetype: string; filename: string } | null)[]
+  >([null, null]);
+  const [bulkVariationUploadPending, setBulkVariationUploadPending] = useState(false);
+  const [bulkVariationUploadError, setBulkVariationUploadError] = useState(false);
   const [bulkMediaKind, setBulkMediaKind] = useState<BulkMediaKind>('document');
   const [bulkMediaKindChosen, setBulkMediaKindChosen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -385,13 +392,34 @@ export function MessageTester() {
         return { messages: buildPersonalizedBulkMessages(bulkPersonalizedRows), error: null };
       }
       if (bulkMode === 'random') {
-        return { messages: buildRandomizedBulkMessages(parseBulkRecipients(bulkRecipients), bulkVariations), error: null };
+        return {
+          messages: buildRandomizedBulkMessages(
+            parseBulkRecipients(bulkRecipients),
+            bulkVariations,
+            undefined,
+            bulkVariations.map((_, index) => {
+              const file = bulkVariationFiles[index];
+              return file ? toBulkAttachment(mediaKindFromMime(file.mimetype), file, '') : null;
+            }),
+          ),
+          error: null,
+        };
       }
       return { messages: [], error: null };
     } catch (error) {
       return { messages: [], error: error instanceof Error ? error.message : 'invalidCsv' };
     }
-  }, [bulkMode, bulkPersonalizedRows, bulkRecipients, bulkVariations]);
+  }, [bulkMode, bulkPersonalizedRows, bulkRecipients, bulkVariations, bulkVariationFiles]);
+  // Base64 is copied into the JSON for EACH recipient, even when they use the same selected file.
+  // Reject above the same conservative 24 MiB payload budget used by the original bulk mode.
+  const bulkRandomInlineTooLarge = useMemo(() => (
+    bulkMode === 'random' &&
+    bulkPrepared.messages.reduce((total, message) => {
+      const media = message.content.image ?? message.content.video ??
+        message.content.audio ?? message.content.document;
+      return total + (media?.base64?.length ?? 0);
+    }, 0) > BULK_INLINE_MEDIA_MAX_BYTES
+  ), [bulkMode, bulkPrepared.messages]);
   const pollOptionsFilled = pollOptions.map(o => o.trim()).filter(o => o.length > 0);
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
@@ -459,7 +487,9 @@ export function MessageTester() {
         !bulkMediaTooLarge && !mediaUrlInvalid && !bulkAudioWithText && !bulkCaptionTooLong &&
         !bulkTextTooLong && bulkRecipientList.length > 0 &&
         bulkRecipientList.length <= BULK_MAX_RECIPIENTS && delayValid
-      : bulkPrepared.error === null && bulkPrepared.messages.length > 0 && delayValid;
+      : bulkPrepared.error === null && bulkPrepared.messages.length > 0 &&
+        !(bulkMode === 'random' &&
+          (bulkRandomInlineTooLarge || bulkVariationUploadPending || bulkVariationUploadError)) && delayValid;
   }
 
   // A new send replaces the batch on screen, so it waits for an in-flight cancel: the cancel's answer
@@ -1127,8 +1157,12 @@ export function MessageTester() {
                   onRowsChange={setBulkPersonalizedRows}
                   variations={bulkVariations}
                   onVariationsChange={setBulkVariations}
+                  variationFiles={bulkVariationFiles}
+                  onVariationFilesChange={setBulkVariationFiles}
+                  onAttachmentBusyChange={setBulkVariationUploadPending}
+                  onAttachmentErrorChange={setBulkVariationUploadError}
                   preview={bulkPrepared.messages}
-                  error={bulkPrepared.error}
+                  error={bulkPrepared.error ?? (bulkRandomInlineTooLarge ? 'inlineMediaTooLarge' : null)}
                   canWrite={canWrite}
                 />
                 {bulkMode !== 'personalized' && (

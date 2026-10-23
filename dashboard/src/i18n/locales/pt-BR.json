@@ -798,12 +798,18 @@
       "randomHint": "Cadastre pelo menos duas mensagens diferentes. O painel distribui as variações em ordem aleatória, sem repetir a mesma mensagem em disparos consecutivos, e mostra a escolha antes de enviar.",
       "variation": "Mensagem {{index}}",
       "addVariation": "Adicionar mensagem",
+      "attachment": "Anexar arquivo à mensagem",
+      "removeAttachment": "Remover anexo",
+      "attachmentHint": "Cada mensagem aleatória pode ter seu próprio anexo. O texto será enviado como legenda da imagem, vídeo ou documento (máx. 1.024 caracteres). Arquivos não são salvos no navegador: selecione-os novamente ao recarregar. Para muitos contatos, use imagens pequenas.",
+      "attachmentFileTooLarge": "Escolha um arquivo não vazio de até 18 MB. Para muitos destinatários, use arquivos menores.",
+      "attachmentAudioUnsupported": "Áudio não permite legenda neste modo. Use imagem, vídeo ou documento para enviar junto com o texto.",
+      "attachmentReadError": "Não foi possível ler o anexo. Tente selecioná-lo novamente.",
       "save": "Salvar neste navegador",
       "clear": "Apagar salvas",
       "browserOnly": "As mensagens salvas ficam somente neste navegador e neste perfil do Windows; não são sincronizadas com o servidor. Evite dados sensíveis.",
       "saved": "Mensagens salvas neste navegador.",
       "cleared": "Cadastro salvo apagado. Os textos abertos no formulário permanecem.",
-      "textOnly": "Estas duas modalidades enviam apenas texto; anexos permanecem disponíveis em ‘Uma mensagem para todos’.",
+      "textOnly": "Mensagem por número envia apenas texto; cada variação aleatória agora pode ter seu próprio anexo.",
       "preview": "Prévia dos {{count}} disparos",
       "previewMore": "... e mais {{count}} destinatários na prévia.",
       "errors": {
@@ -818,6 +824,7 @@
         "duplicateRecipient": "Há números repetidos; revise antes de enviar.",
         "invalidVariations": "Máximo de 30 mensagens alternativas.",
         "needVariations": "Cadastre pelo menos duas mensagens diferentes.",
+        "inlineMediaTooLarge": "Os anexos excedem o limite de 24 MB da requisição ao serem repetidos para cada destinatário. Use arquivos menores ou menos destinatários.",
         "storageUnavailable": "O navegador não permitiu salvar os textos."
       }
     },

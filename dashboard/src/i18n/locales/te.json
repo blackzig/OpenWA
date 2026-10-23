@@ -887,12 +887,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "ఈ సందేశానికి ఫైల్ జోడించండి",
+      "removeAttachment": "జోడింపును తొలగించు",
+      "attachmentHint": "ప్రతి యాదృచ్ఛిక సందేశానికి వేరు జోడింపు ఉండవచ్చు. టెక్స్ట్ చిత్రం, వీడియో లేదా పత్రం వివరణగా వెళ్తుంది (గరిష్ఠం 1,024 అక్షరాలు). ఫైళ్లు సేవ్ కావు; పేజీ రీలోడ్ తర్వాత మళ్లీ ఎంచుకోండి.",
+      "attachmentFileTooLarge": "18 MB లోపు ఖాళీ కాని ఫైల్ ఎంచుకోండి.",
+      "attachmentAudioUnsupported": "ఈ విధానంలో ఆడియోకు వివరణ లేదు. చిత్రం, వీడియో లేదా పత్రం ఉపయోగించండి.",
+      "attachmentReadError": "జోడింపును చదవలేకపోయాం.",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "ప్రతి గ్రహీత సందేశంలో టెక్స్ట్ మాత్రమే వెళ్తుంది; యాదృచ్ఛిక సందేశాలకు వేర్వేరు జోడింపులు ఉండవచ్చు.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -907,6 +913,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "ప్రతి గ్రహీతకు పునరావృతం చేయడంతో జోడింపులు 24 MB పరిమితిని మించాయి. చిన్న ఫైళ్లు లేదా తక్కువ గ్రహీతలను ఎంచుకోండి.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },

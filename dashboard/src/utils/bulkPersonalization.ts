@@ -1,4 +1,5 @@
 import type { BulkMessageItem } from '../services/api';
+import { BULK_CAPTION_MAX_LENGTH, buildBulkMessages, captionLength, type BulkAttachment } from './bulkMedia.ts';
 
 export type PersonalizedRow = { id: string; recipient: string; message: string };
 export type BulkComposeMode = 'same' | 'personalized' | 'random';
@@ -129,23 +130,44 @@ export function parsePersonalizedCsv(input: string): PersonalizedRow[] {
   return rows;
 }
 
-/** Fisher-Yates shuffle; uses a fresh cycle before reusing a variation. */
+/** Fisher-Yates shuffle; uses a fresh cycle before reusing a variation.
+ * Attachments belong to the variation, not to a recipient or a random draw.
+ * The optional fourth argument preserves callers that pass a deterministic random function.
+ */
 export function buildRandomizedBulkMessages(
   chatIds: readonly string[],
   drafts: readonly string[],
   random: () => number = Math.random,
+  attachments: readonly (BulkAttachment | null)[] = [],
 ): BulkMessageItem[] {
   if (!chatIds.length || chatIds.length > MAX_BULK_PERSONALIZED) throw new Error('invalidCount');
   if (drafts.length > MAX_BULK_VARIATIONS) throw new Error('invalidVariations');
-  const options = [...new Set(drafts.map(text => text.trim()).filter(Boolean))];
+
+  // Preserve the first occurrence of a text and its attachment. Distinct text is necessary for
+  // the existing no-consecutive-repeat guarantee, including at cycle boundaries.
+  const seenTexts = new Set<string>();
+  const options = drafts
+    .map((draft, index) => ({ text: draft.trim(), attachment: attachments[index] ?? null }))
+    .filter(option => {
+      if (!option.text || seenTexts.has(option.text)) return false;
+      seenTexts.add(option.text);
+      return true;
+    });
   if (options.length < 2) throw new Error('needVariations');
-  options.forEach(assertText);
+  options.forEach(({ text, attachment }) => {
+    assertText(text);
+    // The bulk engine drops audio captions; never pretend the variant's text would be delivered.
+    if (attachment?.kind === 'audio') throw new Error('audioCaptionUnsupported');
+    if (attachment && captionLength(text) > BULK_CAPTION_MAX_LENGTH) throw new Error('captionTooLong');
+  });
+
   const seen = new Set<string>();
   const recipients = chatIds.map(normalizePersonalizedRecipient);
   for (const chatId of recipients) {
     if (seen.has(chatId)) throw new Error('duplicateRecipient');
     seen.add(chatId);
   }
+
   let pool: number[] = [];
   let previous = -1;
   return recipients.map(chatId => {
@@ -155,7 +177,6 @@ export function buildRandomizedBulkMessages(
         const j = Math.floor(Math.min(Math.max(random(), 0), 0.999999999) * (i + 1));
         [pool[i], pool[j]] = [pool[j], pool[i]];
       }
-      // Do not use the same text on consecutive recipients across cycle boundaries.
       if (pool[pool.length - 1] === previous) {
         const swapIndex = pool.findIndex(index => index !== previous);
         [pool[swapIndex], pool[pool.length - 1]] = [pool[pool.length - 1], pool[swapIndex]];
@@ -163,6 +184,8 @@ export function buildRandomizedBulkMessages(
     }
     const index = pool.pop()!;
     previous = index;
-    return { chatId, type: 'text' as const, content: { text: options[index] } };
+    const { text, attachment } = options[index];
+    // Uses the same per-item media payload as "Same message to everyone".
+    return buildBulkMessages([chatId], text, attachment)[0];
   });
 }

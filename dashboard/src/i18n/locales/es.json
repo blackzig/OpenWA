@@ -843,12 +843,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "Adjuntar archivo a este mensaje",
+      "removeAttachment": "Quitar adjunto",
+      "attachmentHint": "Cada mensaje aleatorio puede tener su propio adjunto. El texto será la descripción de la imagen, vídeo o documento (máx. 1.024 caracteres). Los archivos no se guardan: selecciónalos de nuevo al actualizar.",
+      "attachmentFileTooLarge": "Selecciona un archivo no vacío de hasta 18 MB.",
+      "attachmentAudioUnsupported": "El audio no admite descripción en este modo. Usa imagen, vídeo o documento.",
+      "attachmentReadError": "No se pudo leer el adjunto.",
       "save": "Guardar en este navegador",
       "clear": "Borrar guardados",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "El modo por destinatario envía solo texto; los mensajes aleatorios pueden llevar adjuntos individuales.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -863,6 +869,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "Los adjuntos superan el límite de 24 MB al repetirse por destinatario. Usa archivos más pequeños o menos destinatarios.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },

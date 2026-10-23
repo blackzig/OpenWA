@@ -79,3 +79,46 @@ test('manual entries map exact individualized texts to WhatsApp chats', () => {
   assert.notEqual(entries[0].content.text, entries[1].content.text);
   assert.equal(entries[1].chatId, '5511999990002@c.us');
 });
+
+test('randomized media follows its own text variation and never changes the recipient order', () => {
+  const recipients = Array.from({ length: 6 }, (_, i) => `551199999000${i + 1}`);
+  const first = { kind: 'image' as const, media: { base64: 'aGVsbG8=', mimetype: 'image/png' } };
+  const second = { kind: 'image' as const, media: { base64: 'd29ybGQ=', mimetype: 'image/jpeg' } };
+  const result = buildRandomizedBulkMessages(recipients, ['Primeira', 'Segunda'], () => 0, [first, second]);
+
+  assert.deepEqual(result.map(item => item.chatId), recipients.map(number => `${number}@c.us`));
+  assert.equal(result.length, 6);
+  for (let i = 0; i < result.length; i++) {
+    const item = result[i];
+    assert.equal(item.type, 'image');
+    assert.equal(item.content.text, undefined);
+    assert.equal(item.content.image?.base64, item.content.caption === 'Primeira' ? 'aGVsbG8=' : 'd29ybGQ=');
+    if (i > 0) assert.notEqual(item.content.caption, result[i - 1].content.caption);
+  }
+});
+
+test('randomized send allows a media variation alongside a text-only variation', () => {
+  const result = buildRandomizedBulkMessages(
+    ['5511999990001', '5511999990002'],
+    ['Anexo', 'Somente texto'],
+    () => 0,
+    [{ kind: 'document', media: { base64: 'YQ==', mimetype: 'application/pdf', filename: 'aviso.pdf' } }, null],
+  );
+  assert.equal(result[0].type, 'document');
+  assert.equal(result[0].content.caption, 'Anexo');
+  assert.equal(result[0].content.document?.filename, 'aviso.pdf');
+  assert.deepEqual(result[1].content, { text: 'Somente texto' });
+});
+
+test('randomized attachments reject captions that would be truncated and audio without captions', () => {
+  assert.throws(() => buildRandomizedBulkMessages(
+    ['5511999990001'],
+    ['A'.repeat(1025), 'B'], undefined,
+    [{ kind: 'image', media: { base64: 'YQ==', mimetype: 'image/png' } }, null],
+  ), /captionTooLong/);
+  assert.throws(() => buildRandomizedBulkMessages(
+    ['5511999990001'],
+    ['Primeira', 'Segunda'], undefined,
+    [{ kind: 'audio', media: { base64: 'YQ==', mimetype: 'audio/ogg' } }, null],
+  ), /audioCaptionUnsupported/);
+});

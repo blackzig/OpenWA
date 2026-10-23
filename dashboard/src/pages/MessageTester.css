@@ -682,6 +682,29 @@
 .message-tester .bulk-variation label {
   grid-column: 1 / -1;
 }
+/* A separate optional file picker belongs to each random text variation. */
+.message-tester .bulk-variation-attachment {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.message-tester .form-group .bulk-variation-attachment label {
+  margin: 0;
+}
+.message-tester .form-group .bulk-variation-attachment input[type='file'] {
+  width: auto;
+  max-width: 100%;
+  flex: 1 1 210px;
+  padding: 0.35rem;
+  font-size: 0.8125rem;
+}
+.message-tester .bulk-variation-attachment .hint {
+  overflow-wrap: anywhere;
+}
+
 .message-tester .bulk-preview {
   border: 1px solid var(--border);
   border-radius: var(--radius);
