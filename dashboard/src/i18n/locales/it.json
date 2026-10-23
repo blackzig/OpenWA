@@ -893,12 +893,18 @@
       "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
       "variation": "Message {{index}}",
       "addVariation": "Add message",
+      "attachment": "Allega un file a questo messaggio",
+      "removeAttachment": "Rimuovi allegato",
+      "attachmentHint": "Ogni messaggio casuale può avere un allegato. Il testo diventa la didascalia dell'immagine, video o documento (max 1.024 caratteri). I file non sono salvati: selezionali di nuovo dopo aver ricaricato.",
+      "attachmentFileTooLarge": "Scegli un file non vuoto fino a 18 MB.",
+      "attachmentAudioUnsupported": "L'audio non supporta didascalie in questa modalità. Usa immagini, video o documenti.",
+      "attachmentReadError": "Impossibile leggere l'allegato.",
       "save": "Save in this browser",
       "clear": "Delete saved",
       "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
       "saved": "Messages saved in this browser.",
       "cleared": "Saved set deleted. Texts currently in the editor remain.",
-      "textOnly": "These two modes send text only; attachments remain available under 'Same message to everyone'.",
+      "textOnly": "La modalità per destinatario invia solo testo; i messaggi casuali accettano allegati.",
       "preview": "Preview of {{count}} sends",
       "previewMore": "... and {{count}} more recipients.",
       "errors": {
@@ -913,6 +919,7 @@
         "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
         "invalidVariations": "Maximum 30 message variations.",
         "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "Gli allegati superano il limite di 24 MB quando ripetuti per destinatario. Usa file più piccoli o meno destinatari.",
         "storageUnavailable": "The browser could not save the messages."
       }
     },
