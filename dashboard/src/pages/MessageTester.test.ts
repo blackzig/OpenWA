@@ -948,7 +948,7 @@ test('random bulk sends each selected image with its matching text caption', asy
   const gateway = stubGateway();
   const container = await renderBulkAsWriter();
   rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
-  type(container, '#mt-11', '5511999990001\\n5511999990002\\n5511999990003');
+  type(container, '#mt-11', '5511999990001\n5511999990002\n5511999990003');
   type(container, '#bulk-variant-0', 'Photo one');
   type(container, '#bulk-variant-1', 'Photo two');
 
@@ -979,7 +979,7 @@ test('random bulk refuses inline images repeated beyond the batch body budget', 
   const gateway = stubGateway();
   const container = await renderBulkAsWriter();
   rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
-  type(container, '#mt-11', Array.from({ length: 40 }, (_, i) => `551199999${String(i + 1).padStart(4, '0')}`).join('\\n'));
+  type(container, '#mt-11', Array.from({ length: 40 }, (_, i) => `551199999${String(i + 1).padStart(4, '0')}`).join('\n'));
   type(container, '#bulk-variant-0', 'Image');
   type(container, '#bulk-variant-1', 'Plain text');
 
