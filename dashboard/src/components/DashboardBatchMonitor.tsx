@@ -87,7 +87,7 @@ export function DashboardBatchMonitor({ sessions }: Props) {
           Sessão
           <select value={sessionId} onChange={event => setSessionId(event.target.value)}>
             {sessions.length === 0 && <option value="">Nenhuma sessão disponível</option>}
-            {sessions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {sessions.map(item => <option key={item.id} value={item.id}>{item.id.slice(0, 12)}</option>)}
           </select>
         </label>
         {summaries.length > 0 && (
@@ -103,6 +103,7 @@ export function DashboardBatchMonitor({ sessions }: Props) {
           </label>
         )}
       </div>
+      {session && <p className="dashboard-batch-id">Sessão selecionada: {session.name}</p>}
       {loading && !selected && <p role="status">Consultando os lotes desta sessão...</p>}
       {error && <p role="alert" className="dashboard-batch-error">{error}</p>}
       {!selected && !loading && !error && (
