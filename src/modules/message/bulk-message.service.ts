@@ -439,7 +439,9 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
   }
 
   /** Latest session batches for monitoring across browsers; never loads message payloads or recipient results. */
-  async listRecentBatches(sessionId: string): Promise<Pick<MessageBatch, 'id' | 'batchId' | 'status' | 'progress' | 'createdAt' | 'updatedAt'>[]> {
+  async listRecentBatches(
+    sessionId: string,
+  ): Promise<Pick<MessageBatch, 'id' | 'batchId' | 'status' | 'progress' | 'createdAt' | 'updatedAt'>[]> {
     return this.batchRepository
       .createQueryBuilder('batch')
       .select(['batch.id', 'batch.batchId', 'batch.status', 'batch.progress', 'batch.createdAt', 'batch.updatedAt'])
