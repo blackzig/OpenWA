@@ -49,7 +49,7 @@ jobs:
       - run: npm ci
       - name: TypeScript backend compilation
         run: npm run build
-      - name: Unit tests: controller and chat access
+      - name: 'Unit tests: controller and chat access'
         run: npx jest --runInBand src/modules/message/message.controller.spec.ts src/modules/auth/chat-scope-coverage.spec.ts
       - name: Lint changed backend modules
         run: npx eslint src/modules/message/bulk-message.service.ts src/modules/message/message.controller.ts src/modules/message/dto/bulk-message.dto.ts
