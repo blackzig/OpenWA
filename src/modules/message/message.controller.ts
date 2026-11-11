@@ -576,7 +576,8 @@ export class MessageController {
   @ApiResponse({ status: 403, description: 'Chat-restricted API keys cannot read batch-level information' })
   async listRecentBatches(@Param('sessionId') sessionId: string): Promise<BatchSummaryDto[]> {
     const batches = await this.bulkMessageService.listRecentBatches(sessionId);
-    return batches.map(({ batchId, status, progress, createdAt, updatedAt }) => ({
+    return batches.map(({ id, batchId, status, progress, createdAt, updatedAt }) => ({
+      awaitingReconnect: this.bulkMessageService.isAwaitingReconnect(id),
       batchId,
       status,
       progress,
@@ -613,6 +614,7 @@ export class MessageController {
       batchId: batch.batchId,
       status: batch.status,
       progress: batch.progress,
+      awaitingReconnect: this.bulkMessageService.isAwaitingReconnect(batch.id),
       results: batch.results,
       nextSendAt: batch.status === BatchStatus.PROCESSING ? this.bulkMessageService.getNextSendAt(batch.id) : undefined,
       startedAt: batch.startedAt,
