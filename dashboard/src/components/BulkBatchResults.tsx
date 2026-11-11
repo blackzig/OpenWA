@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { Download, RefreshCw } from 'lucide-react';
 import { messageApi, type BatchStatusResponse, type Session } from '../services/api';
 import { batchReportFilename, buildBatchResultsCsv } from '../utils/bulkBatchReport';
@@ -157,6 +158,12 @@ export function BulkBatchResults({ activeBatch, sessions }: Props) {
 
       {batch ? (
         <>
+          {batch.awaitingReconnect && (
+            <p className="bulk-results-waiting" role="status">
+              Sessão desconectada: disparos pausados. Aguardando reconexão automática. Caso seja necessário,
+              acesse <Link to="/sessions">Sessões</Link> para ler um novo QR Code. Não reenvie o lote.
+            </p>
+          )}
           <div className="bulk-results-summary">
             <span><strong>{batch.progress.total}</strong> total</span>
             <span><strong>{batch.progress.sent}</strong> enviadas</span>
