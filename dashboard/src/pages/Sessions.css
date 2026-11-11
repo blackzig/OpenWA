@@ -905,7 +905,7 @@
   box-sizing: border-box;
 }
 
-.session-reconnect-notice {
+.sessions-page .session-reconnect-notice {
   margin: .75rem 0;
   padding: .65rem .85rem;
   background: #fffbeb;
