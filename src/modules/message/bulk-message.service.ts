@@ -438,6 +438,18 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     return batch;
   }
 
+  /** Latest session batches for monitoring across browsers; never loads message payloads or recipient results. */
+  async listRecentBatches(sessionId: string): Promise<Pick<MessageBatch, 'id' | 'batchId' | 'status' | 'progress' | 'createdAt' | 'updatedAt'>[]> {
+    return this.batchRepository
+      .createQueryBuilder('batch')
+      .select(['batch.id', 'batch.batchId', 'batch.status', 'batch.progress', 'batch.createdAt', 'batch.updatedAt'])
+      .where('batch.sessionId = :sessionId', { sessionId })
+      .orderBy('batch.createdAt', 'DESC')
+      .addOrderBy('batch.id', 'DESC')
+      .take(20)
+      .getMany();
+  }
+
   async getBatchStatus(sessionId: string, batchId: string): Promise<MessageBatch> {
     const batch = await this.batchRepository.findOne({
       where: { batchId, sessionId },
