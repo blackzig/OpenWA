@@ -32,6 +32,16 @@ UPSTREAM_SHA="$(git -C "$ROOT" rev-parse 'FETCH_HEAD^{commit}')"
 
 echo "Customized base: $FEATURE_SHA"
 echo "Upstream release: $UPSTREAM_SHA"
+
+# The customized fork currently has a separate Git history from upstream v0.30.0.
+# An unrelated-histories merge is not an upgrade strategy: avoid mass unrelated conflicts.
+if ! git -C "$ROOT" merge-base "$FEATURE_SHA" "$UPSTREAM_SHA" >/dev/null 2>&1; then
+  echo "UPGRADE NOT APPLIED: customized branch and upstream v0.30.0 have unrelated histories."
+  echo "Safely transplant the custom bulk features onto a fresh v0.30.0 branch and validate migrations."
+  echo "Do not use --allow-unrelated-histories as an automatic upgrade."
+  echo "Running container and current working tree were not changed."
+  exit 3
+fi
 echo "Creating isolated worktree: $STAGE"
 git -C "$ROOT" worktree add --detach "$STAGE" "$FEATURE_SHA"
 git -C "$STAGE" switch -c "$INTEGRATION_BRANCH"
