@@ -31,6 +31,7 @@ import {
 import { PageHeader } from '../components/PageHeader';
 import { buildBulkPacing, previewBlockPacing, type BulkPacingMode } from '../utils/bulkPacing';
 import { BulkComposeOptions } from '../components/BulkComposeOptions';
+import { BulkBatchResults } from '../components/BulkBatchResults';
 import { buildPersonalizedBulkMessages, buildRandomizedBulkMessages, type BulkComposeMode, type PersonalizedRow } from '../utils/bulkPersonalization';
 import { GroupPicker } from '../components/GroupPicker';
 import { groupLabel, isGatewayRefusal, planGroupSend } from '../utils/groupSelection';
@@ -1487,6 +1488,7 @@ export function MessageTester() {
           )}
         </div>
       </div>
+      <BulkBatchResults activeBatch={batchStatus} sessions={allSessions} />
     </div>
   );
 }
