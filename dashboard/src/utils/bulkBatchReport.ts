@@ -10,7 +10,12 @@ export function buildBatchResultsCsv(batch: BatchStatusResponse): string {
   const escapeField = (value: unknown): string => {
     let text = value === null || value === undefined ? '' : String(value);
     // Untrusted gateway errors can be CSV formulas. Treat them as literal text in Excel.
-    if (/^[\s\u0000-\u001f]*[=+\-@]/.test(text)) text = "'" + text;
+    let offset = 0;
+    while (
+      offset < text.length &&
+      (text.charCodeAt(offset) <= 32 || /\s/u.test(text.charAt(offset)))
+    ) offset += 1;
+    if (offset < text.length && '=+-@'.includes(text.charAt(offset))) text = "'" + text;
     return '"' + text.replace(/"/g, '""') + '"';
   };
   const line = (cells: unknown[]) => cells.map(escapeField).join(';');
