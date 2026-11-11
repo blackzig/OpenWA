@@ -117,10 +117,13 @@ export function BulkBatchResults({ activeBatch, sessions }: Props) {
             <option value="">Selecione a sessão</option>
             {sessions.map(item => (
               <option key={item.id} value={item.id}>
-                {item.name} ({item.id.slice(0, 8)})
+                {item.id.slice(0, 8)}
               </option>
             ))}
           </select>
+          <span className="bulk-results-session-label">
+            {sessions.find(item => item.id === sessionId)?.name ?? ''}
+          </span>
         </label>
         <label>
           ID do lote anterior
