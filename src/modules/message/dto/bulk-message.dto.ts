@@ -295,6 +295,24 @@ export class BatchMessageResultDto {
   sentAt?: Date;
 }
 
+/** A bounded batch summary without recipient phone numbers, contents or media. */
+export class BatchSummaryDto {
+  @ApiProperty({ example: 'batch_abc123' })
+  batchId!: string;
+
+  @ApiProperty({ enum: BatchStatus, example: BatchStatus.PROCESSING })
+  status!: BatchStatus;
+
+  @ApiProperty({ type: BatchProgressDto })
+  progress!: BatchProgressDto;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  createdAt!: Date;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  updatedAt!: Date;
+}
+
 export class BatchStatusResponseDto {
   @ApiProperty({ example: 'batch_abc123' })
   batchId!: string;

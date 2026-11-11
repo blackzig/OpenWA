@@ -24,6 +24,7 @@ import {
   SendBulkMessageDto,
   BulkMessageResponseDto,
   BatchStatusResponseDto,
+  BatchSummaryDto,
   BatchCancelResponseDto,
 } from './dto/bulk-message.dto';
 import {
@@ -564,6 +565,24 @@ export class MessageController {
   async react(@Param('sessionId') sessionId: string, @Body() dto: ReactMessageDto): Promise<{ success: boolean }> {
     await this.messageService.reactToMessage(sessionId, dto);
     return { success: true };
+  }
+
+  // Read-only, bounded summaries for dashboard monitoring, including batches started in another browser.
+  // Like getBatchStatus, the default chat-scope guard refuses chat-restricted API keys.
+  @Get('batches')
+  @ApiOperation({ summary: 'List 20 most recent bulk batches for a session without message contents' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiResponse({ status: 200, description: 'Latest batch summaries', type: [BatchSummaryDto] })
+  @ApiResponse({ status: 403, description: 'Chat-restricted API keys cannot read batch-level information' })
+  async listRecentBatches(@Param('sessionId') sessionId: string): Promise<BatchSummaryDto[]> {
+    const batches = await this.bulkMessageService.listRecentBatches(sessionId);
+    return batches.map(({ batchId, status, progress, createdAt, updatedAt }) => ({
+      batchId,
+      status,
+      progress,
+      createdAt,
+      updatedAt,
+    }));
   }
 
   // Declared before ':chatId/history': Express takes the first matching route, so a batch whose
