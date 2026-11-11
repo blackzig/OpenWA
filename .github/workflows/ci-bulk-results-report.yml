@@ -1,0 +1,37 @@
+name: Validate batch results and CSV reports
+
+on:
+  push:
+    branches:
+      - feature/bulk-results-report-0250
+  pull_request:
+    branches:
+      - feature/bulk-random-attachments-0250
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - name: Check i18n parity
+        run: npm run i18n:check
+      - name: Run dashboard unit tests
+        run: npm run test:unit
+      - name: Check TypeScript and compile dashboard
+        run: npm run build
+      - name: Lint new report modules
+        run: npx eslint src/components/BulkBatchResults.tsx src/utils/bulkBatchReport.ts src/utils/bulkBatchReport.test.ts src/pages/MessageTester.tsx
