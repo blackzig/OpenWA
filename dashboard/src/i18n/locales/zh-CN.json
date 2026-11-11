@@ -1010,7 +1010,8 @@
       "batchId": "批次 ID",
       "error": "错误",
       "groups": "群组",
-      "notSent": "未发送"
+      "notSent": "未发送",
+      "batchAcceptedAt": "Batch accepted at (Brasília)"
     },
     "sendFailed": "发送消息失败",
     "notOnWhatsApp": "该号码未在 WhatsApp 注册",
@@ -1025,7 +1026,76 @@
       },
       "progress": "已发送 {{sent}}/{{total}} · {{failed}} 失败 · {{pending}} 待发送",
       "cancel": "取消批次",
-      "cancelling": "取消中..."
+      "cancelling": "取消中...",
+      "acceptedLabel": "Batch accepted for processing",
+      "nextSendIn": "Next send in {{time}}",
+      "nextSendPreparing": "Preparing next send...",
+      "lastSentAt": "Last send accepted by API: {{time}}"
+    },
+    "bulkPersonalization": {
+      "mode": "Bulk send mode",
+      "modes": {
+        "same": "Same message to everyone",
+        "personalized": "Message per recipient",
+        "random": "Random saved messages"
+      },
+      "hint": "Choose how each recipient gets their text.",
+      "perRecipient": "Recipients and messages",
+      "importCsv": "Import CSV",
+      "csvHint": "UTF-8 CSV with numero;mensagem or phone,message headers. Quoted text can contain commas and line breaks.",
+      "phone": "Phone {{index}}",
+      "message": "Message",
+      "remove": "Remove",
+      "addRow": "Add recipient",
+      "variations": "Saved message variations",
+      "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
+      "variation": "Message {{index}}",
+      "addVariation": "Add message",
+      "attachment": "为此消息添加附件",
+      "removeAttachment": "移除附件",
+      "attachmentHint": "每条随机消息可使用不同的附件。文字将作为图片、视频或文档说明（最多 1024 字符）。文件不会保存，刷新后需要重新选择。",
+      "attachmentFileTooLarge": "请选择不超过 18 MB 的非空文件。",
+      "attachmentAudioUnsupported": "此模式下音频不支持说明文字。请选择图片、视频或文档。",
+      "attachmentReadError": "无法读取附件。",
+      "save": "Save in this browser",
+      "clear": "Delete saved",
+      "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
+      "saved": "Messages saved in this browser.",
+      "cleared": "Saved set deleted. Texts currently in the editor remain.",
+      "textOnly": "按收件人发送模式仅支持文字；随机消息可添加独立附件。",
+      "preview": "Preview of {{count}} sends",
+      "previewMore": "... and {{count}} more recipients.",
+      "errors": {
+        "fileTooLarge": "CSV is too large (max 2 MB).",
+        "readError": "Could not read CSV.",
+        "invalidCsv": "Invalid CSV: check quotes, fields and separators.",
+        "invalidHeader": "CSV needs numero (or phone) and mensagem (or message) columns.",
+        "invalidRecipient": "Invalid number: enter an international phone number or WhatsApp chat ID.",
+        "emptyMessage": "Every recipient needs a nonempty message.",
+        "longMessage": "A message exceeds 4,096 characters.",
+        "invalidCount": "Enter between 1 and 100 recipients.",
+        "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
+        "invalidVariations": "Maximum 30 message variations.",
+        "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "附件按收件人重复后超过单批 24 MB 限制。请减小文件或减少收件人。",
+        "storageUnavailable": "The browser could not save the messages."
+      }
+    },
+    "bulkPacing": {
+      "mode": "How should time between sends be calculated?",
+      "random": "Random 0–5 minutes (existing)",
+      "blocks": "Fixed cycle by recipient group",
+      "custom": "Custom delay in milliseconds",
+      "randomHint": "Keeps the existing behavior: each gap is independently drawn from 0 to 5 minutes.",
+      "size": "Messages per group",
+      "sequence": "Delay for each group (minutes)",
+      "blocksHint": "Example: 5 messages with a 2-minute gap, next 5 with 3 minutes, then 4, 5 and 1 minute. Repeats after the last group. There is no delay after the final message.",
+      "customHint": "From 1,000 to 60,000 ms with the original up to 2s jitter.",
+      "errors": {
+        "invalidSize": "Enter an integer between 1 and 100 messages per group.",
+        "invalidSequence": "Enter 1 to 10 integer delays of 1 to 5 minutes, separated by commas.",
+        "invalidCustom": "Enter an integer from 1,000 to 60,000 ms."
+      }
     }
   },
   "numberChecker": {

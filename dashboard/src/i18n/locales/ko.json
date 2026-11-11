@@ -1010,7 +1010,8 @@
       "batchId": "배치 ID",
       "error": "오류",
       "groups": "그룹",
-      "notSent": "보내지 않음"
+      "notSent": "보내지 않음",
+      "batchAcceptedAt": "Batch accepted at (Brasília)"
     },
     "sendFailed": "메시지를 보내지 못했습니다",
     "notOnWhatsApp": "이 번호는 WhatsApp에 등록되어 있지 않습니다",
@@ -1025,7 +1026,76 @@
       },
       "progress": "{{total}}개 중 {{sent}}개 전송됨 · {{failed}}개 실패 · {{pending}}개 대기 중",
       "cancel": "배치 취소",
-      "cancelling": "취소 중..."
+      "cancelling": "취소 중...",
+      "acceptedLabel": "Batch accepted for processing",
+      "nextSendIn": "Next send in {{time}}",
+      "nextSendPreparing": "Preparing next send...",
+      "lastSentAt": "Last send accepted by API: {{time}}"
+    },
+    "bulkPersonalization": {
+      "mode": "Bulk send mode",
+      "modes": {
+        "same": "Same message to everyone",
+        "personalized": "Message per recipient",
+        "random": "Random saved messages"
+      },
+      "hint": "Choose how each recipient gets their text.",
+      "perRecipient": "Recipients and messages",
+      "importCsv": "Import CSV",
+      "csvHint": "UTF-8 CSV with numero;mensagem or phone,message headers. Quoted text can contain commas and line breaks.",
+      "phone": "Phone {{index}}",
+      "message": "Message",
+      "remove": "Remove",
+      "addRow": "Add recipient",
+      "variations": "Saved message variations",
+      "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
+      "variation": "Message {{index}}",
+      "addVariation": "Add message",
+      "attachment": "이 메시지에 파일 첨부",
+      "removeAttachment": "첨부 파일 제거",
+      "attachmentHint": "무작위 메시지마다 개별 첨부 파일을 사용할 수 있습니다. 텍스트는 이미지, 동영상 또는 문서의 설명으로 전송됩니다(최대 1,024자). 파일은 저장되지 않으므로 새로고침 후 다시 선택하세요.",
+      "attachmentFileTooLarge": "18MB 이하의 비어 있지 않은 파일을 선택하세요.",
+      "attachmentAudioUnsupported": "이 모드의 오디오는 설명 텍스트를 지원하지 않습니다. 이미지, 동영상 또는 문서를 사용하세요.",
+      "attachmentReadError": "첨부 파일을 읽지 못했습니다.",
+      "save": "Save in this browser",
+      "clear": "Delete saved",
+      "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
+      "saved": "Messages saved in this browser.",
+      "cleared": "Saved set deleted. Texts currently in the editor remain.",
+      "textOnly": "수신자별 메시지는 텍스트만 전송하며 무작위 메시지에는 개별 첨부 파일을 사용할 수 있습니다.",
+      "preview": "Preview of {{count}} sends",
+      "previewMore": "... and {{count}} more recipients.",
+      "errors": {
+        "fileTooLarge": "CSV is too large (max 2 MB).",
+        "readError": "Could not read CSV.",
+        "invalidCsv": "Invalid CSV: check quotes, fields and separators.",
+        "invalidHeader": "CSV needs numero (or phone) and mensagem (or message) columns.",
+        "invalidRecipient": "Invalid number: enter an international phone number or WhatsApp chat ID.",
+        "emptyMessage": "Every recipient needs a nonempty message.",
+        "longMessage": "A message exceeds 4,096 characters.",
+        "invalidCount": "Enter between 1 and 100 recipients.",
+        "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
+        "invalidVariations": "Maximum 30 message variations.",
+        "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "수신자마다 반복되는 첨부 파일이 24MB 한도를 초과합니다. 파일 크기나 수신자 수를 줄이세요.",
+        "storageUnavailable": "The browser could not save the messages."
+      }
+    },
+    "bulkPacing": {
+      "mode": "How should time between sends be calculated?",
+      "random": "Random 0–5 minutes (existing)",
+      "blocks": "Fixed cycle by recipient group",
+      "custom": "Custom delay in milliseconds",
+      "randomHint": "Keeps the existing behavior: each gap is independently drawn from 0 to 5 minutes.",
+      "size": "Messages per group",
+      "sequence": "Delay for each group (minutes)",
+      "blocksHint": "Example: 5 messages with a 2-minute gap, next 5 with 3 minutes, then 4, 5 and 1 minute. Repeats after the last group. There is no delay after the final message.",
+      "customHint": "From 1,000 to 60,000 ms with the original up to 2s jitter.",
+      "errors": {
+        "invalidSize": "Enter an integer between 1 and 100 messages per group.",
+        "invalidSequence": "Enter 1 to 10 integer delays of 1 to 5 minutes, separated by commas.",
+        "invalidCustom": "Enter an integer from 1,000 to 60,000 ms."
+      }
     }
   },
   "numberChecker": {

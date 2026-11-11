@@ -936,3 +936,14 @@
 .sessions-page .proxy-form-section input[type='text']:focus {
   border-color: var(--focus-ring);
 }
+
+.sessions-page .session-reconnect-notice {
+  margin: .75rem 0;
+  padding: .65rem .85rem;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: .86rem;
+  line-height: 1.45;
+}

@@ -14,6 +14,7 @@ import {
   useStatsOverviewQuery,
 } from '../hooks/queries';
 import { PageHeader } from '../components/PageHeader';
+import { DashboardBatchMonitor } from '../components/DashboardBatchMonitor';
 import { isSessionStarted } from '../utils/sessionActions';
 import './Dashboard.css';
 import { formatLastActive, formatSessionStatus } from '../utils/sessionDisplay';
@@ -141,6 +142,8 @@ export function Dashboard() {
           </div>
         ))}
       </div>
+
+      <DashboardBatchMonitor sessions={sessions} />
 
       {canReadStats && (
         <Suspense fallback={null}>

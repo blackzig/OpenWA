@@ -566,6 +566,9 @@ export interface SendBulkPayload {
     delayBetweenMessages?: number;
     randomizeDelay?: boolean;
     stopOnError?: boolean;
+    pacingMode?: 'blocks';
+    blockSize?: number;
+    blockDelaysMinutes?: number[];
   };
 }
 
@@ -596,13 +599,26 @@ export interface BatchMessageResult {
   sentAt?: string;
 }
 
+/** The 20 latest batches of one session, without individual phone numbers or message payloads. */
+export interface BatchSummary {
+  awaitingReconnect?: boolean;
+  batchId: string;
+  status: BatchStatus;
+  progress: BatchProgress;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** GET batch/:batchId shape. */
 export interface BatchStatusResponse {
+  awaitingReconnect?: boolean;
   batchId: string;
   status: BatchStatus;
   progress: BatchProgress;
   /** One entry per recipient already attempted — empty until the first send resolves. */
   results: BatchMessageResult[];
+  /** Server-calculated deadline for the next item. Missing while sending or after completion. */
+  nextSendAt?: string;
   startedAt?: string | null;
   completedAt?: string | null;
 }
@@ -1344,6 +1360,8 @@ export const messageApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  listRecentBatches: (sessionId: string) =>
+    request<BatchSummary[]>(`/sessions/${sessionId}/messages/batches`),
   getBatchStatus: (sessionId: string, batchId: string) =>
     request<BatchStatusResponse>(`/sessions/${sessionId}/messages/batch/${encodeURIComponent(batchId)}`),
   cancelBatch: (sessionId: string, batchId: string) =>

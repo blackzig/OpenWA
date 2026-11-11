@@ -46,7 +46,7 @@ import { assertBase64LengthWithinMediaCap, assertBase64WithinMediaCap, stripBase
 import { stripBatchMediaPayloads } from './batch-media.util';
 import { SsrfBlockedError, SSRF_BLOCKED_CLIENT_MESSAGE } from '../../common/security/ssrf-guard';
 import { renderedLength, renderTemplate, TemplateRenderError } from '../../common/utils/template-render';
-import { IWhatsAppEngine, MessageResult } from '../../engine/interfaces/whatsapp-engine.interface';
+import { EngineStatus, IWhatsAppEngine, MessageResult } from '../../engine/interfaces/whatsapp-engine.interface';
 import { resolveNonNegativeIntEnv } from '../../config/configuration';
 import { EngineNotReadyError } from '../../common/errors/engine-not-ready.error';
 import { isUniqueViolation } from '../../common/utils/db-errors';
@@ -133,6 +133,13 @@ const ENDED_ELSEWHERE = new Set<BatchStatus>([BatchStatus.FAILED, BatchStatus.CO
 export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = createLogger(BulkMessageService.name);
   private readonly processingBatches = new Map<string, boolean>(); // Track active batches for cancellation
+  /** In-process timing only. Nothing is persisted or scheduled after an app restart. */
+  private readonly nextSendAt = new Map<string, number>();
+  /** An active runner is waiting for session re-link, not trying more recipients. */
+  private readonly awaitingReconnect = new Set<string>();
+  /** Never wait forever: a session that cannot be restored needs operator review, not silent sends. */
+  private readonly maxReconnectWaitMs = 60 * 60_000;
+
   private inFlightBatches = 0; // count of batches currently in processBatch (memory bound, see cap above)
   /** Set at the top of onModuleDestroy: no batch may start sending once the shutdown fail has run. */
   private shuttingDown = false;
@@ -366,11 +373,22 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
-      const options = {
-        delayBetweenMessages: dto.options?.delayBetweenMessages ?? 3000,
-        randomizeDelay: dto.options?.randomizeDelay ?? true,
-        stopOnError: dto.options?.stopOnError ?? false,
-      };
+      // Custom block scheduling; keep the official concurrency/shutdown checks above.
+      if (dto.options?.pacingMode === 'blocks') {
+        if (
+          !dto.options.blockSize ||
+          !dto.options.blockDelaysMinutes?.length ||
+          dto.options.delayBetweenMessages !== undefined ||
+          dto.options.randomizeDelay !== undefined
+        ) {
+          throw new BadRequestException(
+            'Block pacing requires blockSize and blockDelaysMinutes; do not combine with delayBetweenMessages/randomizeDelay',
+          );
+        }
+      } else if (dto.options?.blockSize !== undefined || dto.options?.blockDelaysMinutes !== undefined) {
+        throw new BadRequestException('Block pacing parameters require pacingMode=blocks');
+      }
+      const options = resolveBulkDelayOptions(dto.options);
 
       const progress: BatchProgress = {
         total: messages.length,
@@ -455,6 +473,20 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     }
   }
 
+  /** Latest session batches for monitoring across browsers; never loads message payloads or recipient results. */
+  async listRecentBatches(
+    sessionId: string,
+  ): Promise<Pick<MessageBatch, 'id' | 'batchId' | 'status' | 'progress' | 'createdAt' | 'updatedAt'>[]> {
+    return this.batchRepository
+      .createQueryBuilder('batch')
+      .select(['batch.id', 'batch.batchId', 'batch.status', 'batch.progress', 'batch.createdAt', 'batch.updatedAt'])
+      .where('batch.sessionId = :sessionId', { sessionId })
+      .orderBy('batch.createdAt', 'DESC')
+      .addOrderBy('batch.id', 'DESC')
+      .take(20)
+      .getMany();
+  }
+
   async getBatchStatus(sessionId: string, batchId: string): Promise<MessageBatch> {
     const batch = await this.batchRepository.findOne({
       where: { batchId, sessionId },
@@ -465,6 +497,17 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     }
 
     return batch;
+  }
+
+  /** Monitoring only; the batch remains PROCESSING while suspended for an in-process reconnect. */
+  isAwaitingReconnect(batchDbId: string): boolean {
+    return this.awaitingReconnect.has(batchDbId);
+  }
+
+  /** Countdown for the currently waiting bulk item. Absent while sending or after completion. */
+  getNextSendAt(batchDbId: string): string | undefined {
+    const deadline = this.nextSendAt.get(batchDbId);
+    return deadline === undefined ? undefined : new Date(deadline).toISOString();
   }
 
   async cancelBatch(sessionId: string, batchId: string): Promise<MessageBatch> {
@@ -491,6 +534,7 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     // batch run elsewhere (or already finished here) must not get one: it would leak, and it would
     // make a later takeover reap skip the batch.
     if (this.processingBatches.has(batch.id)) this.processingBatches.set(batch.id, false);
+    this.nextSendAt.delete(batch.id);
 
     // Update status — guarded to the non-terminal statuses IN the UPDATE, so a batch that reached a
     // terminal state between the read above and this write is not relabelled CANCELLED after the
@@ -559,6 +603,8 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     } finally {
       if (reserved) this.inFlightBatches--;
       this.processingBatches.delete(batchDbId);
+      this.nextSendAt.delete(batchDbId);
+      this.awaitingReconnect.delete(batchDbId);
       lifetime.close();
     }
   }
@@ -615,7 +661,66 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
   ): Promise<void> {
     for (let i = batch.currentIndex; i < batch.messages.length; i++) {
       lifetime.assertCurrent();
+      if (!(await this.awaitSessionBeforeNextItem(batch, state, lifetime))) break;
+      lifetime.assertCurrent();
       if (!(await this.processBatchMessage(batch, i, state, lifetime))) break;
+    }
+  }
+
+  /**
+   * Pause a live, same-process batch for a temporary WhatsApp disconnect. The session lifecycle
+   * already drives re-link/reconnect; never launch another engine from the bulk runner.
+   * A full server crash is different: startup deliberately fails interrupted batches because a
+   * send accepted just before a crash may have reached WhatsApp before its DB progress was written.
+   */
+  private async awaitSessionBeforeNextItem(
+    batch: MessageBatch,
+    state: BatchExecutionState,
+    lifetime: SessionWriteScope,
+  ): Promise<boolean> {
+    let waitingSince: number | undefined;
+    try {
+      while (!this.shuttingDown && this.processingBatches.get(batch.id) === true) {
+        lifetime.assertCurrent();
+        const engine = this.engines.get(batch.sessionId);
+        // The interface requires getStatus(). Some older isolated test doubles omit it; those
+        // fakes are considered ready so they do not start long-running timers in unit tests.
+        if (engine && (typeof engine.getStatus !== 'function' || engine.getStatus() === EngineStatus.READY)) {
+          if (waitingSince !== undefined) {
+            this.logger.log(`Batch ${batch.batchId} resumed after session ${batch.sessionId} reconnected`);
+          }
+          return true;
+        }
+
+        if (waitingSince === undefined) {
+          waitingSince = Date.now();
+          this.awaitingReconnect.add(batch.id);
+          this.logger.warn(`Batch ${batch.batchId}: WhatsApp session not ready; pausing before the next recipient`);
+        }
+
+        // A cancel/terminal update from another process must stop the suspended run, too.
+        const stored = await this.batchRepository.findOne({
+          where: { id: batch.id },
+          select: { status: true },
+        });
+        lifetime.assertCurrent();
+        if (!stored || stored.status !== BatchStatus.PROCESSING) {
+          if (stored && ENDED_ELSEWHERE.has(stored.status)) state.endedElsewhere = true;
+          else state.cancelledByDb = true;
+          return false;
+        }
+        if (Date.now() - waitingSince >= this.maxReconnectWaitMs) {
+          // No recipient was attempted during the pause: leave its pending count intact. The batch
+          // finishes as FAILED for review, without automatically resending a potentially uncertain item.
+          state.stoppedOnError = true;
+          this.logger.warn(`Batch ${batch.batchId}: session did not reconnect within 60 minutes; stopping safely`);
+          return false;
+        }
+        await setTimeout(2000);
+      }
+      return false;
+    } finally {
+      this.awaitingReconnect.delete(batch.id);
     }
   }
 
@@ -823,8 +928,13 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
 
     // Delay before next message (except for last)
     if (i < batch.messages.length - 1 && this.processingBatches.get(batch.id)) {
-      const delay = this.calculateDelay(batch.options);
-      await setTimeout(delay);
+      const delay = calculateBulkDelayMs(batch.options, Math.random, i);
+      this.nextSendAt.set(batch.id, Date.now() + delay);
+      try {
+        await setTimeout(delay);
+      } finally {
+        this.nextSendAt.delete(batch.id);
+      }
     }
     return true;
   }
@@ -1188,12 +1298,75 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
         return Promise.reject(new Error(`Unsupported message type: ${type}`));
     }
   }
+}
 
-  private calculateDelay(options: { delayBetweenMessages: number; randomizeDelay: boolean }): number {
-    let delay = options.delayBetweenMessages;
-    if (options.randomizeDelay) {
-      delay += Math.random() * 2000; // Add 0-2 seconds random
+/** Maximum pause between bulk messages when no interval was configured. */
+export const DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS = 300_000;
+
+export function resolveBulkDelayOptions(dtoOptions?: SendBulkMessageDto['options']): {
+  delayBetweenMessages: number;
+  randomizeDelay: boolean;
+  stopOnError: boolean;
+  pacingMode?: 'blocks';
+  blockSize?: number;
+  blockDelaysMinutes?: number[];
+} {
+  const randomizeDelay = dtoOptions?.randomizeDelay ?? true;
+  return {
+    // Zero remains an internal marker for the original 0–5 minute random mode.
+    delayBetweenMessages: dtoOptions?.delayBetweenMessages ?? (randomizeDelay ? 0 : 3000),
+    randomizeDelay,
+    stopOnError: dtoOptions?.stopOnError ?? false,
+    ...(dtoOptions?.pacingMode === 'blocks'
+      ? {
+          pacingMode: 'blocks' as const,
+          blockSize: dtoOptions.blockSize,
+          blockDelaysMinutes: [...(dtoOptions.blockDelaysMinutes ?? [])],
+        }
+      : {}),
+  };
+}
+
+/**
+ * Index i is the zero-based message just processed. The subsequent gap is assigned
+ * by the group containing that message: 0..4 -> first delay, 5..9 -> second.
+ * The caller never waits after the last message. Fixed block delays have no jitter;
+ * the default random and explicitly configured legacy modes stay unchanged.
+ */
+export function calculateBulkDelayMs(
+  options: {
+    delayBetweenMessages: number;
+    randomizeDelay: boolean;
+    pacingMode?: 'blocks';
+    blockSize?: number;
+    blockDelaysMinutes?: number[];
+  },
+  random: () => number = Math.random,
+  messageIndex = 0,
+): number {
+  if (options.pacingMode === 'blocks') {
+    const size = options.blockSize;
+    const delays = options.blockDelaysMinutes;
+    if (
+      !Number.isInteger(size) ||
+      !size ||
+      size < 1 ||
+      size > 100 ||
+      !Array.isArray(delays) ||
+      delays.length < 1 ||
+      delays.length > 10 ||
+      delays.some(n => !Number.isInteger(n) || n < 1 || n > 5) ||
+      !Number.isInteger(messageIndex) ||
+      messageIndex < 0
+    ) {
+      throw new Error('Invalid block pacing options');
     }
-    return delay;
+    const step = Math.floor(messageIndex / size) % delays.length;
+    return delays[step] * 60_000;
   }
+  if (options.randomizeDelay && options.delayBetweenMessages === 0) {
+    return Math.floor(random() * (DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS + 1));
+  }
+  // Original explicit fixed-base delay (with the optional 0–2 second jitter).
+  return options.delayBetweenMessages + (options.randomizeDelay ? random() * 2000 : 0);
 }

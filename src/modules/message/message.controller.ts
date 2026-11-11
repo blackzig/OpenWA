@@ -4,6 +4,7 @@ import type { Response } from 'express';
 import { retryAfterWhenBusy, storedFileAttachment } from '../../common/storage/storage-transfer';
 import { MessageService } from './message.service';
 import { BulkMessageService } from './bulk-message.service';
+import { BatchStatus } from './entities/message-batch.entity';
 import {
   SendTextMessageDto,
   SendMediaMessageDto,
@@ -24,6 +25,7 @@ import {
   SendBulkMessageDto,
   BulkMessageResponseDto,
   BatchStatusResponseDto,
+  BatchSummaryDto,
   BatchCancelResponseDto,
 } from './dto/bulk-message.dto';
 import {
@@ -572,6 +574,25 @@ export class MessageController {
     return { success: true };
   }
 
+  // Read-only, bounded summaries for dashboard monitoring, including batches started in another browser.
+  // Like getBatchStatus, the default chat-scope guard refuses chat-restricted API keys.
+  @Get('batches')
+  @ApiOperation({ summary: 'List 20 most recent bulk batches for a session without message contents' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  @ApiResponse({ status: 200, description: 'Latest batch summaries', type: [BatchSummaryDto] })
+  @ApiResponse({ status: 403, description: 'Chat-restricted API keys cannot read batch-level information' })
+  async listRecentBatches(@Param('sessionId') sessionId: string): Promise<BatchSummaryDto[]> {
+    const batches = await this.bulkMessageService.listRecentBatches(sessionId);
+    return batches.map(({ id, batchId, status, progress, createdAt, updatedAt }) => ({
+      awaitingReconnect: this.bulkMessageService.isAwaitingReconnect(id),
+      batchId,
+      status,
+      progress,
+      createdAt,
+      updatedAt,
+    }));
+  }
+
   // Declared before ':chatId/history': Express takes the first matching route, so a batch whose
   // caller-supplied id is 'history' would otherwise be read as the chat history of chat 'batch'.
   @Get('batch/:batchId')
@@ -600,7 +621,9 @@ export class MessageController {
       batchId: batch.batchId,
       status: batch.status,
       progress: batch.progress,
+      awaitingReconnect: this.bulkMessageService.isAwaitingReconnect(batch.id),
       results: batch.results,
+      nextSendAt: batch.status === BatchStatus.PROCESSING ? this.bulkMessageService.getNextSendAt(batch.id) : undefined,
       startedAt: batch.startedAt,
       completedAt: batch.completedAt,
     };

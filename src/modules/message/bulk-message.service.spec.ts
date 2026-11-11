@@ -13,6 +13,9 @@ import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { failUnfinishedSessionBatches } from './batch-media.util';
 import {
   BulkMessageService,
+  resolveBulkDelayOptions,
+  calculateBulkDelayMs,
+  DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS,
   resolveFinalBatchStatus,
   sanitizeBatchError,
   resolveMaxConcurrentBatches,
@@ -21,7 +24,7 @@ import { MessageBatch, BatchStatus, BatchMessageStatus, BatchMessageResult } fro
 import { MessageStatus } from './entities/message.entity';
 import { SendBulkMessageDto } from './dto/bulk-message.dto';
 import { EngineRegistry } from '../../engine/engine-registry.service';
-import type { IWhatsAppEngine } from '../../engine/interfaces/whatsapp-engine.interface';
+import { EngineStatus, type IWhatsAppEngine } from '../../engine/interfaces/whatsapp-engine.interface';
 import { MessageService } from './message.service';
 import { SendPacingService, SEND_PACING_LIMITED } from './send-pacing.service';
 import { SessionOwnershipService } from '../session/session-ownership.service';
@@ -539,6 +542,26 @@ describe('BulkMessageService.processBatch', () => {
         processBatch: (id: string, reserved: boolean, lifetime: SessionWriteScope) => Promise<void>;
       }
     ).processBatch('b1', false, captureSessionWrites(repo, 's1'));
+
+  it('exposes the exact next-send deadline only while the bulk batch is waiting', async () => {
+    const batch = makeBatch(2);
+    batch.options = { delayBetweenMessages: 150, randomizeDelay: false, stopOnError: false };
+    repo.findOne.mockResolvedValue(batch);
+
+    const process = runProcessBatch();
+    let deadline: string | undefined;
+    for (let i = 0; i < 40; i++) {
+      deadline = service.getNextSendAt('b1');
+      if (deadline) break;
+      await new Promise(resolve => setTimeout(resolve, 2));
+    }
+    expect(deadline).toEqual(expect.any(String));
+    expect(Date.parse(deadline!)).toBeGreaterThan(Date.now());
+
+    await process;
+    expect(engine.sendTextMessage).toHaveBeenCalledTimes(2);
+    expect(service.getNextSendAt('b1')).toBeUndefined();
+  });
 
   const inFlightMarkers = (): Map<string, boolean> =>
     (service as unknown as { processingBatches: Map<string, boolean> }).processingBatches;
@@ -1149,19 +1172,47 @@ describe('BulkMessageService.processBatch', () => {
     expect(replacement.sendTextMessage).toHaveBeenCalledWith('c1@c.us', 'hi');
   });
 
-  it('fails only the item whose engine is gone mid-batch, without feeding the send breaker', async () => {
-    repo.findOne.mockResolvedValue(makeBatch(2));
+  it('pauses after an engine disappears, then continues at the next unsent recipient after reconnect', async () => {
+    const batch = makeBatch(2);
+    repo.findOne.mockImplementation(({ select }: { select?: { status?: boolean } }) =>
+      Promise.resolve(select?.status ? { status: BatchStatus.PROCESSING } : batch),
+    );
+    const replacement = { sendTextMessage: jest.fn().mockResolvedValue({ id: 'wa2', timestamp: 222 }) };
     engine.sendTextMessage.mockImplementationOnce(() => {
       engines.delete('s1');
+      setTimeout(() => engines.set('s1', replacement as unknown as IWhatsAppEngine), 50);
       return Promise.resolve({ id: 'wa1', timestamp: 111 });
     });
 
     await runProcessBatch();
 
     const finalPartial = (repo.update.mock.calls as Array<[unknown, { results: BatchMessageResult[] }]>).at(-1)![1];
-    expect(finalPartial.results.map(r => r.status)).toEqual([BatchMessageStatus.SENT, BatchMessageStatus.FAILED]);
-    expect(finalPartial.results[1].error?.message).toMatch(/not connected/i);
+    expect(finalPartial.results.map(r => r.status)).toEqual([BatchMessageStatus.SENT, BatchMessageStatus.SENT]);
+    expect(engine.sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(replacement.sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(replacement.sendTextMessage).toHaveBeenCalledWith('c1@c.us', 'hi');
     expect(pacing.recordSendFailure).not.toHaveBeenCalled();
+    expect(service.isAwaitingReconnect('b1')).toBe(false);
+  });
+
+  it('pauses before the first item when the registered engine reports DISCONNECTED', async () => {
+    const batch = makeBatch(1);
+    repo.findOne.mockImplementation(({ select }: { select?: { status?: boolean } }) =>
+      Promise.resolve(select?.status ? { status: BatchStatus.PROCESSING } : batch),
+    );
+    let status = EngineStatus.DISCONNECTED;
+    engines.set('s1', {
+      sendTextMessage: engine.sendTextMessage,
+      getStatus: () => status,
+    } as unknown as IWhatsAppEngine);
+    setTimeout(() => { status = EngineStatus.READY; }, 50);
+
+    await runProcessBatch();
+
+    expect(engine.sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(batch.currentIndex).toBe(1);
+    expect(batch.progress.failed).toBe(0);
+    expect(service.isAwaitingReconnect('b1')).toBe(false);
   });
 
   // The create-time check sees the raw input; a gate rewrite can still empty an item out.
@@ -2416,5 +2467,99 @@ describe('BulkMessageService.createBatch base64 media cap', () => {
     expect(engine.sendImageMessage).toHaveBeenCalledTimes(1);
     expect(batch.progress.sent).toBe(2);
     expect(batch.results).toHaveLength(2);
+  });
+});
+
+describe('Bulk message delay (client 0-5 minute requirement)', () => {
+  it('defaults to an internal 0-5 minute randomized interval when the caller leaves the delay blank', () => {
+    expect(resolveBulkDelayOptions(undefined)).toEqual({
+      delayBetweenMessages: 0,
+      randomizeDelay: true,
+      stopOnError: false,
+    });
+    expect(resolveBulkDelayOptions({ stopOnError: true })).toEqual({
+      delayBetweenMessages: 0,
+      randomizeDelay: true,
+      stopOnError: true,
+    });
+  });
+
+  it('covers both bounds and the middle of the 0..300000ms interval', () => {
+    const options = resolveBulkDelayOptions(undefined);
+    expect(DEFAULT_HUMANIZED_BULK_MAX_DELAY_MS).toBe(300_000);
+    expect(calculateBulkDelayMs(options, () => 0)).toBe(0);
+    expect(calculateBulkDelayMs(options, () => 0.5)).toBe(150_000);
+    expect(calculateBulkDelayMs(options, () => 0.999999999)).toBe(300_000);
+  });
+
+  it('preserves explicit fixed-base delays with the original 0-2 second jitter', () => {
+    const options = resolveBulkDelayOptions({ delayBetweenMessages: 30_000 });
+    expect(options).toEqual({
+      delayBetweenMessages: 30_000,
+      randomizeDelay: true,
+      stopOnError: false,
+    });
+    expect(calculateBulkDelayMs(options, () => 0)).toBe(30_000);
+    expect(calculateBulkDelayMs(options, () => 0.5)).toBe(31_000);
+    expect(calculateBulkDelayMs(options, () => 0.999)).toBe(31_998);
+  });
+
+  it('preserves disabled randomization and its original base delay', () => {
+    const options = resolveBulkDelayOptions({ randomizeDelay: false });
+    expect(options.delayBetweenMessages).toBe(3_000);
+    expect(calculateBulkDelayMs(options, () => 0.7)).toBe(3_000);
+    const fixed = resolveBulkDelayOptions({
+      delayBetweenMessages: 60_000,
+      randomizeDelay: false,
+    });
+    expect(calculateBulkDelayMs(fixed, () => 0.3)).toBe(60_000);
+  });
+
+  it('keeps 0ms saved testing batches with randomization disabled untouched', () => {
+    expect(calculateBulkDelayMs({ delayBetweenMessages: 0, randomizeDelay: false })).toBe(0);
+  });
+});
+
+
+describe('Opt-in block pacing (unchanged default random behavior)', () => {
+  const options = resolveBulkDelayOptions({
+    pacingMode: 'blocks',
+    blockSize: 5,
+    blockDelaysMinutes: [2, 3, 4, 5, 1],
+  });
+
+  it('persists the selected block schedule without replacing the random default', () => {
+    expect(options).toMatchObject({
+      pacingMode: 'blocks',
+      blockSize: 5,
+      blockDelaysMinutes: [2, 3, 4, 5, 1],
+    });
+    expect(resolveBulkDelayOptions(undefined).pacingMode).toBeUndefined();
+  });
+
+  it('uses one step for each group of five sends and repeats after 25 sends', () => {
+    const expectedMinutes = [2, 3, 4, 5, 1, 2];
+    for (let group = 0; group < expectedMinutes.length; group++) {
+      for (let offset = 0; offset < 5; offset++) {
+        const index = group * 5 + offset;
+        expect(calculateBulkDelayMs(options, () => 0.5, index)).toBe(expectedMinutes[group] * 60_000);
+      }
+    }
+  });
+
+  it('does not add random 0–2s jitter in the blocks mode', () => {
+    expect(calculateBulkDelayMs(options, () => 0, 0)).toBe(120_000);
+    expect(calculateBulkDelayMs(options, () => 0.9999, 0)).toBe(120_000);
+  });
+
+  it('rejects corrupted persisted block schedules instead of sending too quickly', () => {
+    expect(() => calculateBulkDelayMs({ ...options, blockSize: 0 })).toThrow('Invalid block pacing');
+    expect(() => calculateBulkDelayMs({ ...options, blockDelaysMinutes: [0, 6] })).toThrow('Invalid block pacing');
+    expect(() => calculateBulkDelayMs(options, () => 0.5, -1)).toThrow('Invalid block pacing');
+  });
+
+  it('still supports legacy custom delays and true 0–5 minute random pauses', () => {
+    expect(calculateBulkDelayMs(resolveBulkDelayOptions(), () => 0.5, 14)).toBe(150_000);
+    expect(calculateBulkDelayMs(resolveBulkDelayOptions({ delayBetweenMessages: 1500 }), () => 0.5, 14)).toBe(2500);
   });
 });

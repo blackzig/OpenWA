@@ -75,6 +75,7 @@ export const MUST_STAY_UNMARKED: ReadonlyArray<readonly [string, string]> = [
   ['group.controller.ts', 'getInviteCode'],
   ['group.controller.ts', 'revokeInviteCode'],
   // A batch row has no key owner, so its status and cancel cannot be checked against an allowlist.
+  ['message.controller.ts', 'listRecentBatches'],
   ['message.controller.ts', 'getBatchStatus'],
   ['message.controller.ts', 'cancelBatch'],
 ];

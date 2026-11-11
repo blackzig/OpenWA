@@ -1010,7 +1010,8 @@
       "batchId": "Batch-ID",
       "error": "Fehler",
       "groups": "Gruppen",
-      "notSent": "Nicht gesendet"
+      "notSent": "Nicht gesendet",
+      "batchAcceptedAt": "Batch accepted at (Brasília)"
     },
     "sendFailed": "Nachricht konnte nicht gesendet werden",
     "notOnWhatsApp": "Diese Nummer ist nicht bei WhatsApp registriert",
@@ -1025,7 +1026,76 @@
       },
       "progress": "{{sent}} von {{total}} gesendet · {{failed}} fehlgeschlagen · {{pending}} ausstehend",
       "cancel": "Batch abbrechen",
-      "cancelling": "Wird abgebrochen..."
+      "cancelling": "Wird abgebrochen...",
+      "acceptedLabel": "Batch accepted for processing",
+      "nextSendIn": "Next send in {{time}}",
+      "nextSendPreparing": "Preparing next send...",
+      "lastSentAt": "Last send accepted by API: {{time}}"
+    },
+    "bulkPersonalization": {
+      "mode": "Massenversand-Modus",
+      "modes": {
+        "same": "Eine Nachricht für alle",
+        "personalized": "Nachricht pro Empfänger",
+        "random": "Zufällige Nachrichten"
+      },
+      "hint": "Choose how each recipient gets their text.",
+      "perRecipient": "Empfänger und Nachrichten",
+      "importCsv": "CSV importieren",
+      "csvHint": "UTF-8 CSV with numero;mensagem or phone,message headers. Quoted text can contain commas and line breaks.",
+      "phone": "Phone {{index}}",
+      "message": "Nachricht",
+      "remove": "Entfernen",
+      "addRow": "Empfänger hinzufügen",
+      "variations": "Gespeicherte Nachrichten",
+      "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
+      "variation": "Message {{index}}",
+      "addVariation": "Add message",
+      "attachment": "Datei an diese Nachricht anhängen",
+      "removeAttachment": "Anhang entfernen",
+      "attachmentHint": "Jede Zufallsnachricht kann einen eigenen Anhang haben. Text wird als Bild-, Video- oder Dokumentunterschrift gesendet (max. 1.024 Zeichen). Dateien werden nicht gespeichert und müssen nach dem Neuladen erneut ausgewählt werden.",
+      "attachmentFileTooLarge": "Wähle eine nicht leere Datei bis 18 MB.",
+      "attachmentAudioUnsupported": "Audio unterstützt hier keine Bildunterschrift. Verwende Bild, Video oder Dokument.",
+      "attachmentReadError": "Anhang konnte nicht gelesen werden.",
+      "save": "In diesem Browser speichern",
+      "clear": "Gespeicherte löschen",
+      "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
+      "saved": "Messages saved in this browser.",
+      "cleared": "Saved set deleted. Texts currently in the editor remain.",
+      "textOnly": "Nachricht pro Empfänger sendet nur Text; Zufallsnachrichten können Anhänge enthalten.",
+      "preview": "Preview of {{count}} sends",
+      "previewMore": "... and {{count}} more recipients.",
+      "errors": {
+        "fileTooLarge": "CSV is too large (max 2 MB).",
+        "readError": "Could not read CSV.",
+        "invalidCsv": "Invalid CSV: check quotes, fields and separators.",
+        "invalidHeader": "CSV needs numero (or phone) and mensagem (or message) columns.",
+        "invalidRecipient": "Invalid number: enter an international phone number or WhatsApp chat ID.",
+        "emptyMessage": "Every recipient needs a nonempty message.",
+        "longMessage": "A message exceeds 4,096 characters.",
+        "invalidCount": "Enter between 1 and 100 recipients.",
+        "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
+        "invalidVariations": "Maximum 30 message variations.",
+        "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "Anhänge überschreiten bei Wiederholung pro Empfänger das 24-MB-Limit. Kleinere Dateien oder weniger Empfänger verwenden.",
+        "storageUnavailable": "The browser could not save the messages."
+      }
+    },
+    "bulkPacing": {
+      "mode": "Wie soll die Pause zwischen Nachrichten berechnet werden?",
+      "random": "Zufällig 0 bis 5 Minuten",
+      "blocks": "Fester Zyklus nach Gruppen",
+      "custom": "Benutzerdefinierte Pause (ms)",
+      "randomHint": "Keeps the existing behavior: each gap is independently drawn from 0 to 5 minutes.",
+      "size": "Nachrichten pro Gruppe",
+      "sequence": "Pausen je Gruppe (Minuten)",
+      "blocksHint": "Example: 5 messages with a 2-minute gap, next 5 with 3 minutes, then 4, 5 and 1 minute. Repeats after the last group. There is no delay after the final message.",
+      "customHint": "From 1,000 to 60,000 ms with the original up to 2s jitter.",
+      "errors": {
+        "invalidSize": "Enter an integer between 1 and 100 messages per group.",
+        "invalidSequence": "Enter 1 to 10 integer delays of 1 to 5 minutes, separated by commas.",
+        "invalidCustom": "Enter an integer from 1,000 to 60,000 ms."
+      }
     }
   },
   "numberChecker": {

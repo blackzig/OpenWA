@@ -16,6 +16,8 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
   Matches,
+  ArrayMinSize,
+  IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Validate } from 'class-validator';
@@ -174,6 +176,41 @@ class BulkMessageItemDto {
 
 class BulkMessageOptionsDto {
   @ApiPropertyOptional({
+    enum: ['blocks'],
+    description:
+      'Optional alternative pacing: repeat blockDelaysMinutes across blocks of blockSize messages. Omit to preserve the default random 0–5 minute pacing.',
+  })
+  @IsOptional()
+  @IsIn(['blocks'])
+  pacingMode?: 'blocks';
+
+  @ApiPropertyOptional({
+    description: 'How many consecutive messages use each step in the block cycle.',
+    minimum: 1,
+    maximum: 100,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  blockSize?: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description: 'Sequence of fixed delays in minutes, each from 1 to 5. Cycles when all steps were used.',
+    minItems: 1,
+    maxItems: 10,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @Max(5, { each: true })
+  blockDelaysMinutes?: number[];
+
+  @ApiPropertyOptional({
     description: 'Delay between messages in ms.',
     default: 3000,
     minimum: 1000,
@@ -299,7 +336,37 @@ export class BatchMessageResultDto {
   sentAt?: Date;
 }
 
+/** A bounded batch summary without recipient phone numbers, contents or media. */
+export class BatchSummaryDto {
+  @ApiProperty({
+    description: 'True while the active bulk runner is waiting for this session to reconnect.',
+    example: false,
+  })
+  awaitingReconnect!: boolean;
+
+  @ApiProperty({ example: 'batch_abc123' })
+  batchId!: string;
+
+  @ApiProperty({ enum: BatchStatus, example: BatchStatus.PROCESSING })
+  status!: BatchStatus;
+
+  @ApiProperty({ type: BatchProgressDto })
+  progress!: BatchProgressDto;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  createdAt!: Date;
+
+  @ApiProperty({ type: String, format: 'date-time' })
+  updatedAt!: Date;
+}
+
 export class BatchStatusResponseDto {
+  @ApiProperty({
+    description: 'True if the batch is suspended before its next recipient while WhatsApp reconnects.',
+    example: false,
+  })
+  awaitingReconnect!: boolean;
+
   @ApiProperty({ example: 'batch_abc123' })
   batchId!: string;
 
@@ -311,6 +378,13 @@ export class BatchStatusResponseDto {
 
   @ApiProperty({ type: [BatchMessageResultDto], description: 'One entry per recipient already attempted.' })
   results!: BatchMessageResultDto[];
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: 'Actual scheduled time of the next bulk send, only while the batch is waiting between messages.',
+  })
+  nextSendAt?: string;
 
   @ApiPropertyOptional({
     type: String,

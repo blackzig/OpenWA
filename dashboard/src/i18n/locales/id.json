@@ -1010,7 +1010,8 @@
       "batchId": "ID Batch",
       "error": "Kesalahan",
       "groups": "Grup",
-      "notSent": "Tidak terkirim"
+      "notSent": "Tidak terkirim",
+      "batchAcceptedAt": "Batch accepted at (Brasília)"
     },
     "sendFailed": "Gagal mengirim pesan",
     "notOnWhatsApp": "Nomor ini tidak terdaftar di WhatsApp",
@@ -1025,7 +1026,76 @@
       },
       "progress": "Terkirim {{sent}} dari {{total}} · {{failed}} gagal · {{pending}} menunggu",
       "cancel": "Batalkan Batch",
-      "cancelling": "Membatalkan..."
+      "cancelling": "Membatalkan...",
+      "acceptedLabel": "Batch accepted for processing",
+      "nextSendIn": "Next send in {{time}}",
+      "nextSendPreparing": "Preparing next send...",
+      "lastSentAt": "Last send accepted by API: {{time}}"
+    },
+    "bulkPersonalization": {
+      "mode": "Bulk send mode",
+      "modes": {
+        "same": "Same message to everyone",
+        "personalized": "Message per recipient",
+        "random": "Random saved messages"
+      },
+      "hint": "Choose how each recipient gets their text.",
+      "perRecipient": "Recipients and messages",
+      "importCsv": "Import CSV",
+      "csvHint": "UTF-8 CSV with numero;mensagem or phone,message headers. Quoted text can contain commas and line breaks.",
+      "phone": "Phone {{index}}",
+      "message": "Message",
+      "remove": "Remove",
+      "addRow": "Add recipient",
+      "variations": "Saved message variations",
+      "randomHint": "Enter at least two different messages. The dashboard shuffles each cycle without immediately repeating a variation and previews the choice before sending.",
+      "variation": "Message {{index}}",
+      "addVariation": "Add message",
+      "attachment": "Lampirkan berkas ke pesan ini",
+      "removeAttachment": "Hapus lampiran",
+      "attachmentHint": "Setiap pesan acak dapat memiliki lampiran sendiri. Teks menjadi keterangan gambar, video, atau dokumen (maks. 1.024 karakter). Berkas tidak disimpan; pilih lagi setelah memuat ulang.",
+      "attachmentFileTooLarge": "Pilih berkas yang tidak kosong, maksimal 18 MB.",
+      "attachmentAudioUnsupported": "Audio tidak mendukung keterangan pada mode ini. Gunakan gambar, video, atau dokumen.",
+      "attachmentReadError": "Lampiran tidak dapat dibaca.",
+      "save": "Save in this browser",
+      "clear": "Delete saved",
+      "browserOnly": "Saved texts remain in this browser's local profile and are not synchronized to the server. Avoid sensitive information.",
+      "saved": "Messages saved in this browser.",
+      "cleared": "Saved set deleted. Texts currently in the editor remain.",
+      "textOnly": "Mode per penerima hanya mengirim teks; pesan acak dapat memakai lampiran berbeda.",
+      "preview": "Preview of {{count}} sends",
+      "previewMore": "... and {{count}} more recipients.",
+      "errors": {
+        "fileTooLarge": "CSV is too large (max 2 MB).",
+        "readError": "Could not read CSV.",
+        "invalidCsv": "Invalid CSV: check quotes, fields and separators.",
+        "invalidHeader": "CSV needs numero (or phone) and mensagem (or message) columns.",
+        "invalidRecipient": "Invalid number: enter an international phone number or WhatsApp chat ID.",
+        "emptyMessage": "Every recipient needs a nonempty message.",
+        "longMessage": "A message exceeds 4,096 characters.",
+        "invalidCount": "Enter between 1 and 100 recipients.",
+        "duplicateRecipient": "Duplicate phone numbers must be resolved before sending.",
+        "invalidVariations": "Maximum 30 message variations.",
+        "needVariations": "Enter at least two different messages.",
+        "inlineMediaTooLarge": "Lampiran melebihi batas 24 MB saat diulang untuk tiap penerima. Gunakan berkas lebih kecil atau lebih sedikit penerima.",
+        "storageUnavailable": "The browser could not save the messages."
+      }
+    },
+    "bulkPacing": {
+      "mode": "How should time between sends be calculated?",
+      "random": "Random 0–5 minutes (existing)",
+      "blocks": "Fixed cycle by recipient group",
+      "custom": "Custom delay in milliseconds",
+      "randomHint": "Keeps the existing behavior: each gap is independently drawn from 0 to 5 minutes.",
+      "size": "Messages per group",
+      "sequence": "Delay for each group (minutes)",
+      "blocksHint": "Example: 5 messages with a 2-minute gap, next 5 with 3 minutes, then 4, 5 and 1 minute. Repeats after the last group. There is no delay after the final message.",
+      "customHint": "From 1,000 to 60,000 ms with the original up to 2s jitter.",
+      "errors": {
+        "invalidSize": "Enter an integer between 1 and 100 messages per group.",
+        "invalidSequence": "Enter 1 to 10 integer delays of 1 to 5 minutes, separated by commas.",
+        "invalidCustom": "Enter an integer from 1,000 to 60,000 ms."
+      }
     }
   },
   "numberChecker": {

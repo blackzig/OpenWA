@@ -8,6 +8,7 @@ import {
   type MessageResponse,
   type BatchStatus,
   type BatchStatusResponse,
+  type BulkMessageItem,
 } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useRole } from '../hooks/useRole';
@@ -28,6 +29,10 @@ import {
   type BulkMediaKind,
 } from '../utils/bulkMedia';
 import { PageHeader } from '../components/PageHeader';
+import { buildBulkPacing, previewBlockPacing, type BulkPacingMode } from '../utils/bulkPacing';
+import { BulkComposeOptions } from '../components/BulkComposeOptions';
+import { BulkBatchResults } from '../components/BulkBatchResults';
+import { buildPersonalizedBulkMessages, buildRandomizedBulkMessages, type BulkComposeMode, type PersonalizedRow } from '../utils/bulkPersonalization';
 import { GroupPicker } from '../components/GroupPicker';
 import { groupLabel, isGatewayRefusal, planGroupSend } from '../utils/groupSelection';
 import { normalizePhoneDigits } from '../utils/phone';
@@ -35,6 +40,22 @@ import { sendSequentially } from '../utils/sendSequentially';
 import { keepsSameKey } from '../utils/authLifecycle';
 import './MessageTester.css';
 import { MEDIA_UPLOAD_MAX_BYTES } from '../utils/mediaUpload';
+
+/** Show timestamps in Brazilian civil time without changing API/SQLite ISO values. */
+export function formatBrazilianDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date).replace(', ', ' às ');
+}
 
 interface ApiResponse {
   success: boolean;
@@ -135,6 +156,17 @@ const phoneDigits = (text: string): string | null => {
   return digits.length > PHONE_DIGITS_MAX ? null : digits;
 };
 
+/** Format the backend's actual deadline; never estimate from the 0-5 min range. */
+export function formatNextBulkSendCountdown(nextSendAt: string, now: number): string | null {
+  const deadline = Date.parse(nextSendAt);
+  if (!Number.isFinite(deadline)) return null;
+  const remainingSeconds = Math.ceil((deadline - now) / 1000);
+  if (remainingSeconds <= 0) return '00:00';
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function MessageTester() {
   const { t } = useTranslation();
   useDocumentTitle(t('messageTester.title'));
@@ -187,18 +219,40 @@ export function MessageTester() {
   const [forwardMessageId, setForwardMessageId] = useState('');
   const [bulkRecipients, setBulkRecipients] = useState('');
   const [bulkDelay, setBulkDelay] = useState('');
+  const [bulkPacingMode, setBulkPacingMode] = useState<BulkPacingMode>('random');
+  const [bulkBlockSize, setBulkBlockSize] = useState('5');
+  const [bulkBlockSequence, setBulkBlockSequence] = useState('2,3,4,5,1');
+  const [bulkMode, setBulkMode] = useState<BulkComposeMode>('same');
+  const [bulkPersonalizedRows, setBulkPersonalizedRows] = useState<PersonalizedRow[]>([{ id: 'initial-0', recipient: '', message: '' }]);
+  const [bulkVariations, setBulkVariations] = useState<string[]>(['', '']);
+  // Files are deliberately kept in memory only. Saved variation TEXT remains browser-local;
+  // attachments must be selected again after a refresh (never persist sensitive media in storage).
+  const [bulkVariationFiles, setBulkVariationFiles] = useState<
+    ({ base64: string; mimetype: string; filename: string } | null)[]
+  >([null, null]);
+  const [bulkVariationUploadPending, setBulkVariationUploadPending] = useState(false);
+  const [bulkVariationUploadError, setBulkVariationUploadError] = useState(false);
   const [bulkMediaKind, setBulkMediaKind] = useState<BulkMediaKind>('document');
   const [bulkMediaKindChosen, setBulkMediaKindChosen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<ApiResponse | null>(null);
   // Live bulk-batch progress, polled every ~2s while the batch runs (see startBatchPolling).
   const [batchStatus, setBatchStatus] = useState<BatchStatusResponse | null>(null);
+  const [batchCountdownNow, setBatchCountdownNow] = useState(Date.now);
   const [batchCancelling, setBatchCancelling] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
   const batchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // The session a running batch belongs to: the user may switch the selector mid-batch, and
   // poll/cancel must keep addressing the session the batch was created on.
   const batchSessionRef = useRef('');
+
+  // Count down locally each second; the existing poll supplies the server's exact deadline.
+  useEffect(() => {
+    if (batchStatus?.status !== 'processing' || !batchStatus.nextSendAt) return;
+    setBatchCountdownNow(Date.now());
+    const timer = setInterval(() => setBatchCountdownNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [batchStatus?.status, batchStatus?.nextSendAt]);
 
   const {
     data: groups = [],
@@ -346,13 +400,49 @@ export function MessageTester() {
 
   const isMediaMessageType = mediaMessageTypes.includes(messageType);
   const bulkRecipientList = useMemo(() => parseBulkRecipients(bulkRecipients), [bulkRecipients]);
+  // The exact preview payload is sent unchanged; an unrelated state update must not re-randomize it.
+  const bulkPrepared = useMemo((): { messages: BulkMessageItem[]; error: string | null } => {
+    try {
+      if (bulkMode === 'personalized') {
+        return { messages: buildPersonalizedBulkMessages(bulkPersonalizedRows), error: null };
+      }
+      if (bulkMode === 'random') {
+        return {
+          messages: buildRandomizedBulkMessages(
+            parseBulkRecipients(bulkRecipients),
+            bulkVariations,
+            undefined,
+            bulkVariations.map((_, index) => {
+              const file = bulkVariationFiles[index];
+              return file ? toBulkAttachment(mediaKindFromMime(file.mimetype), file, '') : null;
+            }),
+          ),
+          error: null,
+        };
+      }
+      return { messages: [], error: null };
+    } catch (error) {
+      return { messages: [], error: error instanceof Error ? error.message : 'invalidCsv' };
+    }
+  }, [bulkMode, bulkPersonalizedRows, bulkRecipients, bulkVariations, bulkVariationFiles]);
+  // Base64 is copied into the JSON for EACH recipient, even when they use the same selected file.
+  // Reject above the same conservative 24 MiB payload budget used by the original bulk mode.
+  const bulkRandomInlineTooLarge = useMemo(() => (
+    bulkMode === 'random' &&
+    bulkPrepared.messages.reduce((total, message) => {
+      const media = message.content.image ?? message.content.video ??
+        message.content.audio ?? message.content.document;
+      return total + (media?.base64?.length ?? 0);
+    }, 0) > BULK_INLINE_MEDIA_MAX_BYTES
+  ), [bulkMode, bulkPrepared.messages]);
   const pollOptionsFilled = pollOptions.map(o => o.trim()).filter(o => o.length > 0);
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
-  const delayMs = bulkDelay.trim() === '' ? undefined : parseInt(bulkDelay, 10);
+  const pacing = buildBulkPacing(bulkPacingMode, bulkBlockSize, bulkBlockSequence, bulkDelay);
   const bulkAttachment = messageType === 'bulk' ? toBulkAttachment(bulkMediaKind, mediaFile, mediaUrl) : null;
   const bulkMediaTooLarge =
     messageType === 'bulk' &&
+    bulkMode === 'same' &&
     !!mediaFile &&
     mediaFile.base64.length * bulkRecipientList.length > BULK_INLINE_MEDIA_MAX_BYTES;
   // The gateway reads a media string as a URL only with an http(s) prefix and decodes anything else as
@@ -406,16 +496,15 @@ export function MessageTester() {
   } else if (messageType === 'forward') {
     formValid = namesRecipient(forwardTo) && forwardMessageId.trim().length > 0;
   } else if (messageType === 'bulk') {
-    formValid =
-      (content.trim().length > 0 || bulkAttachment !== null) &&
-      !bulkMediaTooLarge &&
-      !mediaUrlInvalid &&
-      !bulkAudioWithText &&
-      !bulkCaptionTooLong &&
-      !bulkTextTooLong &&
-      bulkRecipientList.length > 0 &&
-      bulkRecipientList.length <= BULK_MAX_RECIPIENTS &&
-      (delayMs === undefined || (!Number.isNaN(delayMs) && delayMs >= 1000 && delayMs <= 60000));
+    const delayValid = pacing.valid;
+    formValid = bulkMode === 'same'
+      ? (content.trim().length > 0 || bulkAttachment !== null) &&
+        !bulkMediaTooLarge && !mediaUrlInvalid && !bulkAudioWithText && !bulkCaptionTooLong &&
+        !bulkTextTooLong && bulkRecipientList.length > 0 &&
+        bulkRecipientList.length <= BULK_MAX_RECIPIENTS && delayValid
+      : bulkPrepared.error === null && bulkPrepared.messages.length > 0 &&
+        !(bulkMode === 'random' &&
+          (bulkRandomInlineTooLarge || bulkVariationUploadPending || bulkVariationUploadError)) && delayValid;
   }
 
   // A personal recipient is only the default chat a forward is taken from, so a forward from a named chat uses none.
@@ -551,8 +640,8 @@ export function MessageTester() {
       // Bulk is a batch, not a single send: 202 + batchId, then poll progress until terminal.
       if (messageType === 'bulk') {
         const batch = await messageApi.sendBulk(session, {
-          messages: buildBulkMessages(bulkRecipientList, content, bulkAttachment),
-          ...(delayMs !== undefined ? { options: { delayBetweenMessages: delayMs } } : {}),
+          messages: bulkMode === 'same' ? buildBulkMessages(bulkRecipientList, content, bulkAttachment) : bulkPrepared.messages,
+          ...(pacing.options ? { options: pacing.options } : {}),
         });
         assertCurrent();
         batchSessionRef.current = session;
@@ -662,6 +751,9 @@ export function MessageTester() {
       if (!unmountedRef.current && generation === sendGenerationRef.current) setIsLoading(false);
     }
   };
+
+  // Each sentAt comes from the engine's accepted-send result, not a delivery/read receipt.
+  const lastBulkSentAt = batchStatus?.results.filter(result => result.status === 'sent' && result.sentAt).at(-1)?.sentAt;
 
   const batchPercent =
     batchStatus && batchStatus.progress.total > 0
@@ -1117,6 +1209,22 @@ export function MessageTester() {
 
             {messageType === 'bulk' && (
               <>
+                <BulkComposeOptions
+                  mode={bulkMode}
+                  onModeChange={setBulkMode}
+                  rows={bulkPersonalizedRows}
+                  onRowsChange={setBulkPersonalizedRows}
+                  variations={bulkVariations}
+                  onVariationsChange={setBulkVariations}
+                  variationFiles={bulkVariationFiles}
+                  onVariationFilesChange={setBulkVariationFiles}
+                  onAttachmentBusyChange={setBulkVariationUploadPending}
+                  onAttachmentErrorChange={setBulkVariationUploadError}
+                  preview={bulkPrepared.messages}
+                  error={bulkPrepared.error ?? (bulkRandomInlineTooLarge ? 'inlineMediaTooLarge' : null)}
+                  canWrite={canWrite}
+                />
+                {bulkMode !== 'personalized' && (
                 <div className="form-group">
                   <div
                     style={{
@@ -1153,6 +1261,8 @@ export function MessageTester() {
                     {t('messageTester.bulkRecipientsCount', { count: bulkRecipientList.length })}
                   </span>
                 </div>
+                )}
+                {bulkMode === 'same' && (
                 <div className="form-group">
                   <label htmlFor="mt-12">{t('messageTester.messageContent')}</label>
                   <textarea
@@ -1175,8 +1285,9 @@ export function MessageTester() {
                           : ''}
                   </span>
                 </div>
-                {mediaSourceFields}
-                {bulkAttachment && (
+                )}
+                {bulkMode === 'same' && mediaSourceFields}
+                {bulkMode === 'same' && bulkAttachment && (
                   <div className="form-group">
                     <span className="group-label" id="bulk-media-kind-label">
                       {t('messageTester.bulkMediaKind')}
@@ -1204,20 +1315,68 @@ export function MessageTester() {
                   </div>
                 )}
                 <div className="form-group">
-                  <label htmlFor="mt-18">
-                    {t('messageTester.bulkDelay')} ({t('common.optional')})
-                  </label>
-                  <input
-                    id="mt-18"
-                    type="number"
-                    min={1000}
-                    max={60000}
-                    step={500}
-                    value={bulkDelay}
-                    onChange={e => setBulkDelay(e.target.value)}
-                    placeholder="3000"
-                  />
-                  <span className="hint">{t('messageTester.bulkDelayHint')}</span>
+                  <label htmlFor="bulk-pacing-mode">{t('messageTester.bulkPacing.mode')}</label>
+                  <select
+                    id="bulk-pacing-mode"
+                    value={bulkPacingMode}
+                    onChange={event => setBulkPacingMode(event.target.value as BulkPacingMode)}
+                  >
+                    <option value="random">{t('messageTester.bulkPacing.random')}</option>
+                    <option value="blocks">{t('messageTester.bulkPacing.blocks')}</option>
+                    <option value="custom">{t('messageTester.bulkPacing.custom')}</option>
+                  </select>
+                  {bulkPacingMode === 'random' && (
+                    <span className="hint">{t('messageTester.bulkPacing.randomHint')}</span>
+                  )}
+                  {bulkPacingMode === 'blocks' && (
+                    <div className="bulk-pacing-config">
+                      <label htmlFor="bulk-block-size">{t('messageTester.bulkPacing.size')}</label>
+                      <input
+                        id="bulk-block-size"
+                        type="number"
+                        min={1}
+                        max={100}
+                        step={1}
+                        value={bulkBlockSize}
+                        onChange={event => setBulkBlockSize(event.target.value)}
+                      />
+                      <label htmlFor="bulk-block-sequence">{t('messageTester.bulkPacing.sequence')}</label>
+                      <input
+                        id="bulk-block-sequence"
+                        type="text"
+                        value={bulkBlockSequence}
+                        onChange={event => setBulkBlockSequence(event.target.value)}
+                        placeholder="2,3,4,5,1"
+                      />
+                      <span className="hint">{t('messageTester.bulkPacing.blocksHint')}</span>
+                      {pacing.valid && pacing.sequence && (
+                        <div className="bulk-pacing-preview" role="status">
+                          {previewBlockPacing(Number(bulkBlockSize), pacing.sequence)
+                            .map((part, index) => <span key={index}>{part}</span>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {bulkPacingMode === 'custom' && (
+                    <>
+                      <label htmlFor="mt-18">{t('messageTester.bulkDelay')}</label>
+                      <input
+                        id="mt-18"
+                        type="number"
+                        min={1000}
+                        max={60000}
+                        step={500}
+                        value={bulkDelay}
+                        onChange={event => setBulkDelay(event.target.value)}
+                      />
+                      <span className="hint">{t('messageTester.bulkPacing.customHint')}</span>
+                    </>
+                  )}
+                  {!pacing.valid && (
+                    <span className="hint error" role="alert">
+                      {t('messageTester.bulkPacing.errors.' + pacing.error)}
+                    </span>
+                  )}
                 </div>
               </>
             )}
@@ -1251,7 +1410,7 @@ export function MessageTester() {
                 {response.success ? (
                   <>
                     <CheckCircle size={20} />
-                    <span>{t('messageTester.successLabel')}</span>
+                    <span>{t(response.batchId ? 'messageTester.batch.acceptedLabel' : 'messageTester.successLabel')}</span>
                   </>
                 ) : (
                   <>
@@ -1268,8 +1427,8 @@ export function MessageTester() {
 
               <div className="response-details">
                 <div className="detail-row">
-                  <span className="detail-label">{t('messageTester.response.timestamp')}</span>
-                  <span className="detail-value">{response.timestamp}</span>
+                  <span className="detail-label">{t(response.batchId ? 'messageTester.response.batchAcceptedAt' : 'messageTester.response.timestamp')}</span>
+                  <span className="detail-value">{formatBrazilianDateTime(response.timestamp)}</span>
                 </div>
                 {response.messageId && (
                   <div className="detail-row">
@@ -1359,6 +1518,22 @@ export function MessageTester() {
                       total: batchStatus.progress.total,
                     })}
                   </div>
+                  {lastBulkSentAt && (
+                    <div className="batch-progress-line">
+                      {t('messageTester.batch.lastSentAt', { time: formatBrazilianDateTime(lastBulkSentAt) })}
+                    </div>
+                  )}
+                  {batchStatus.status === 'processing' && batchStatus.nextSendAt && (
+                    <div className="batch-progress-line" role="timer" aria-live="off">
+                      {(() => {
+                        const remaining = formatNextBulkSendCountdown(batchStatus.nextSendAt, batchCountdownNow);
+                        if (remaining === null) return null;
+                        return remaining === '00:00'
+                          ? t('messageTester.batch.nextSendPreparing')
+                          : t('messageTester.batch.nextSendIn', { time: remaining });
+                      })()}
+                    </div>
+                  )}
                   {batchError && <div className="batch-error">{batchError}</div>}
                 </div>
               )}
@@ -1374,6 +1549,7 @@ export function MessageTester() {
           )}
         </div>
       </div>
+      <BulkBatchResults activeBatch={batchStatus} sessions={allSessions} />
     </div>
   );
 }

@@ -2002,15 +2002,15 @@ test('the QR modal says WhatsApp asked for a passkey, on both tabs', async () =>
     fireEvent.click(within(card).getByRole('button', { name: 'Show QR' }));
     await screen.findByAltText('QR');
 
-    const note = screen.getByRole('status');
+    const note = within(screen.getByRole('dialog')).getByRole('status');
     assert.match(note.textContent ?? '', /WhatsApp asked for a passkey to finish linking this device/);
     assert.match(note.textContent ?? '', /will not complete the link/);
 
     // The phone tab is the other way to link, and WhatsApp asks for the passkey on it too.
     fireEvent.click(screen.getByRole('tab', { name: 'Link with Phone Number' }));
-    assert.match(screen.getByRole('status').textContent ?? '', /asked for a passkey/);
+    assert.match(within(screen.getByRole('dialog')).getByRole('status').textContent ?? '', /asked for a passkey/);
     // The phone tab shows a code to type, not one to scan, so the note must not tell the operator to scan.
-    assert.doesNotMatch(screen.getByRole('status').textContent ?? '', /scan/i);
+    assert.doesNotMatch(within(screen.getByRole('dialog')).getByRole('status').textContent ?? '', /scan/i);
   });
 });
 

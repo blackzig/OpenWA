@@ -51,7 +51,7 @@ afterEach(() => {
 interface BulkItem {
   chatId: string;
   type: string;
-  content: { caption?: string; image?: { base64?: string; mimetype?: string } };
+  content: { text?: string; caption?: string; image?: { base64?: string; mimetype?: string } };
 }
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -1445,4 +1445,151 @@ test('phone fields are tel inputs and id fields are left to right', async () => 
   for (const id of ['mt-17', 'mt-9', 'mt-10']) assert.equal(attr(id, 'dir'), 'ltr', id);
   rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Bulk' }));
   assert.equal(attr('mt-11', 'dir'), 'ltr');
+});
+
+test('formatNextBulkSendCountdown reports the real remaining mm:ss, then transitions to 00:00', async () => {
+  const { formatNextBulkSendCountdown } = await import('./MessageTester.tsx');
+  const now = Date.parse('2026-10-21T12:00:00.000Z');
+  assert.equal(formatNextBulkSendCountdown(new Date(now + 300_000).toISOString(), now), '05:00');
+  assert.equal(formatNextBulkSendCountdown(new Date(now + 154_100).toISOString(), now), '02:35');
+  assert.equal(formatNextBulkSendCountdown(new Date(now + 1).toISOString(), now), '00:01');
+  assert.equal(formatNextBulkSendCountdown(new Date(now).toISOString(), now), '00:00');
+  assert.equal(formatNextBulkSendCountdown(new Date(now - 10_000).toISOString(), now), '00:00');
+  assert.equal(formatNextBulkSendCountdown('not-a-date', now), null);
+});
+
+test('batch acceptance date is formatted in Brazilian time without altering the source ISO', async () => {
+  const { formatBrazilianDateTime } = await import('./MessageTester.tsx');
+  const original = '2026-10-21T22:51:31.161Z';
+  assert.equal(formatBrazilianDateTime(original), '21/10/2026 às 19:51:31');
+  assert.equal(original, '2026-10-21T22:51:31.161Z');
+  assert.equal(formatBrazilianDateTime('not-a-date'), '—');
+});
+
+test('Brazilian time uses the São Paulo UTC-3 zone for midnight crossings', async () => {
+  const { formatBrazilianDateTime } = await import('./MessageTester.tsx');
+  assert.equal(formatBrazilianDateTime('2026-10-22T01:04:05.000Z'), '21/10/2026 às 22:04:05');
+});
+
+
+test('a manual bulk table sends one distinct text to each entered phone', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Message per recipient' }));
+  type(container, '#bulk-row-phone-initial-0', '5511999990001');
+  type(container, '#bulk-row-message-initial-0', 'Hello Maria');
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Add recipient' }));
+  type(container, '#bulk-row-phone-0', '5511999990002');
+  type(container, '#bulk-row-message-0', 'Hello Carlos');
+
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+
+  assert.deepEqual(
+    gateway.bulkBodies[0].messages.map(msg => [msg.chatId, msg.content.text]),
+    [
+      ['5511999990001@c.us', 'Hello Maria'],
+      ['5511999990002@c.us', 'Hello Carlos'],
+    ],
+  );
+});
+
+test('randomized bulk preview matches the exact body submitted, with different consecutive texts', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
+  type(container, '#mt-11', '5511999990001\n5511999990002\n5511999990003');
+  type(container, '#bulk-variant-0', 'Variation A');
+  type(container, '#bulk-variant-1', 'Variation B');
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+
+  const preview = Array.from(container.querySelectorAll('.bulk-preview-item span:last-child')).map(el => el.textContent);
+  assert.equal(preview.length, 3);
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const sentTexts = gateway.bulkBodies[0].messages.map(msg => msg.content.text);
+  assert.deepEqual(sentTexts, preview);
+  assert.notEqual(sentTexts[0], sentTexts[1]);
+  assert.notEqual(sentTexts[1], sentTexts[2]);
+});
+
+
+test('random bulk sends each selected image with its matching text caption', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
+  type(container, '#mt-11', '5511999990001\n5511999990002\n5511999990003');
+  type(container, '#bulk-variant-0', 'Photo one');
+  type(container, '#bulk-variant-1', 'Photo two');
+
+  rtl.fireEvent.change(field(container, '#bulk-variant-file-0'), {
+    target: { files: [new window.File(['image-one'], 'one.png', { type: 'image/png' })] },
+  });
+  await rtl.screen.findByText(/one.png/);
+  rtl.fireEvent.change(field(container, '#bulk-variant-file-1'), {
+    target: { files: [new window.File(['image-two'], 'two.png', { type: 'image/png' })] },
+  });
+  await rtl.screen.findByText(/two.png/);
+
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const messages = gateway.bulkBodies[0].messages;
+  assert.equal(messages.length, 3);
+  assert.ok(messages.every(item => item.type === 'image'));
+  assert.ok(messages.every(item => item.content.image?.base64));
+  for (const message of messages) {
+    const data = Buffer.from(message.content.image!.base64!, 'base64').toString('utf8');
+    assert.equal(data, message.content.caption === 'Photo one' ? 'image-one' : 'image-two');
+  }
+  assert.notEqual(messages[0].content.caption, messages[1].content.caption);
+});
+
+test('random bulk refuses inline images repeated beyond the batch body budget', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Random saved messages' }));
+  type(container, '#mt-11', Array.from({ length: 40 }, (_, i) => `551199999${String(i + 1).padStart(4, '0')}`).join('\n'));
+  type(container, '#bulk-variant-0', 'Image');
+  type(container, '#bulk-variant-1', 'Plain text');
+
+  rtl.fireEvent.change(field(container, '#bulk-variant-file-0'), {
+    target: { files: [new window.File([new Uint8Array(1100000)], 'big.png', { type: 'image/png' })] },
+  });
+  await rtl.screen.findByText(/big.png/);
+  await rtl.screen.findByText(/total attachments exceed the 24 MB batch request limit/);
+  assert.equal(sendButton().disabled, true);
+  assert.equal(gateway.bulkBodies.length, 0);
+});
+
+test('opt-in 5-item block pacing sends exact settings without modifying recipients or content', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  type(container, '#mt-11', '5511999990001\n5511999990002');
+  type(container, '#mt-12', 'Authorized test message');
+  rtl.fireEvent.change(field(container, '#bulk-pacing-mode'), { target: { value: 'blocks' } });
+  type(container, '#bulk-block-size', '5');
+  type(container, '#bulk-block-sequence', '2,3,4,5,1');
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const body = gateway.bulkBodies[0] as { messages: BulkItem[]; options?: unknown };
+  assert.deepEqual(body.options, {
+    pacingMode: 'blocks', blockSize: 5, blockDelaysMinutes: [2, 3, 4, 5, 1],
+  });
+  assert.equal(body.messages.length, 2);
+  assert.deepEqual(body.messages.map(entry => entry.content.text), ['Authorized test message', 'Authorized test message']);
+});
+
+test('random pacing remains the default and submits no fixed delay options', async () => {
+  const gateway = stubGateway();
+  const container = await renderBulkAsWriter();
+  type(container, '#mt-11', '5511999990001\n5511999990002');
+  type(container, '#mt-12', 'Authorized test message');
+  await rtl.waitFor(() => assert.equal(sendButton().disabled, false));
+  rtl.fireEvent.click(sendButton());
+  await rtl.waitFor(() => assert.equal(gateway.bulkBodies.length, 1));
+  const body = gateway.bulkBodies[0] as { messages: BulkItem[]; options?: unknown };
+  assert.equal(body.options, undefined);
 });
