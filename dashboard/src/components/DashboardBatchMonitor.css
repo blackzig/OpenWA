@@ -76,3 +76,11 @@
   .dashboard-batch-metrics strong { font-size: 1.2rem; }
   .dashboard-batch-metrics span { font-size: .7rem; }
 }
+
+.dashboard-batch-connection-warning {
+  padding: .75rem 1rem;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 7px;
+  color: #92400e;
+}

@@ -42,7 +42,7 @@ import { HookManager } from '../../core/hooks';
 import { assertBase64WithinMediaCap, stripBase64DataUri } from './media-cap.util';
 import { SsrfBlockedError, SSRF_BLOCKED_CLIENT_MESSAGE } from '../../common/security/ssrf-guard';
 import { renderTemplate } from '../../common/utils/template-render';
-import { IWhatsAppEngine, MessageResult } from '../../engine/interfaces/whatsapp-engine.interface';
+import { EngineStatus, IWhatsAppEngine, MessageResult } from '../../engine/interfaces/whatsapp-engine.interface';
 import { resolveNonNegativeIntEnv } from '../../config/configuration';
 import { EngineNotReadyError } from '../../common/errors/engine-not-ready.error';
 import { isUniqueViolation } from '../../common/utils/db-errors';
@@ -123,6 +123,11 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
   private readonly processingBatches = new Map<string, boolean>(); // Track active batches for cancellation
   /** In-process timing only. Nothing is persisted or scheduled after an app restart. */
   private readonly nextSendAt = new Map<string, number>();
+  /** An active runner is waiting for session re-link, not trying more recipients. */
+  private readonly awaitingReconnect = new Set<string>();
+  /** Never wait forever: a session that cannot be restored needs operator review, not silent sends. */
+  private readonly maxReconnectWaitMs = 60 * 60_000;
+
   private inFlightBatches = 0; // count of batches currently in processBatch (memory bound, see cap above)
   /** Set at the top of onModuleDestroy: no batch may start sending once the shutdown fail has run. */
   private shuttingDown = false;
@@ -464,6 +469,11 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
     return batch;
   }
 
+  /** Monitoring only; the batch remains PROCESSING while suspended for an in-process reconnect. */
+  isAwaitingReconnect(batchDbId: string): boolean {
+    return this.awaitingReconnect.has(batchDbId);
+  }
+
   /** Countdown for the currently waiting bulk item. Absent while sending or after completion. */
   getNextSendAt(batchDbId: string): string | undefined {
     const deadline = this.nextSendAt.get(batchDbId);
@@ -560,6 +570,7 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
       if (reserved) this.inFlightBatches--;
       this.processingBatches.delete(batchDbId);
       this.nextSendAt.delete(batchDbId);
+      this.awaitingReconnect.delete(batchDbId);
     }
   }
 
@@ -609,7 +620,61 @@ export class BulkMessageService implements OnModuleInit, OnApplicationBootstrap,
 
   private async processBatchMessages(batch: MessageBatch, state: BatchExecutionState): Promise<void> {
     for (let i = batch.currentIndex; i < batch.messages.length; i++) {
+      // Never advance to the next number while the connection is unavailable. A send that was already
+      // attempted is still recorded by processBatchMessage; only not-yet-attempted items are paused.
+      if (!(await this.awaitSessionBeforeNextItem(batch, state))) break;
       if (!(await this.processBatchMessage(batch, i, state))) break;
+    }
+  }
+
+  /**
+   * Pause a live, same-process batch for a temporary WhatsApp disconnect. The session lifecycle
+   * already drives re-link/reconnect; never launch another engine from the bulk runner.
+   * A full server crash is different: startup deliberately fails interrupted batches because a
+   * send accepted just before a crash may have reached WhatsApp before its DB progress was written.
+   */
+  private async awaitSessionBeforeNextItem(batch: MessageBatch, state: BatchExecutionState): Promise<boolean> {
+    let waitingSince: number | undefined;
+    try {
+      while (!this.shuttingDown && this.processingBatches.get(batch.id) === true) {
+        const engine = this.engines.get(batch.sessionId);
+        // The interface requires getStatus(). Some older isolated test doubles omit it; those
+        // fakes are considered ready so they do not start long-running timers in unit tests.
+        if (engine && (typeof engine.getStatus !== 'function' || engine.getStatus() === EngineStatus.READY)) {
+          if (waitingSince !== undefined) {
+            this.logger.log(`Batch ${batch.batchId} resumed after session ${batch.sessionId} reconnected`);
+          }
+          return true;
+        }
+
+        if (waitingSince === undefined) {
+          waitingSince = Date.now();
+          this.awaitingReconnect.add(batch.id);
+          this.logger.warn(`Batch ${batch.batchId}: WhatsApp session not ready; pausing before the next recipient`);
+        }
+
+        // A cancel/terminal update from another process must stop the suspended run, too.
+        const stored = await this.batchRepository.findOne({
+          where: { id: batch.id },
+          select: { status: true },
+        });
+        if (!stored || stored.status !== BatchStatus.PROCESSING) {
+          if (stored && ENDED_ELSEWHERE.has(stored.status)) state.endedElsewhere = true;
+          else state.cancelledByDb = true;
+          return false;
+        }
+        if (Date.now() - waitingSince >= this.maxReconnectWaitMs) {
+          // No recipient was attempted during the pause: leave its pending count intact. The batch
+          // finishes as FAILED for review, without automatically resending a potentially uncertain item.
+          state.stoppedOnError = true;
+          this.logger.warn(`Batch ${batch.batchId}: session did not reconnect within 60 minutes; stopping safely`);
+          return false;
+        }
+        await setTimeout(2000);
+      }
+      return false;
+    } finally {
+      this.awaitingReconnect.delete(batch.id);
     }
   }
 

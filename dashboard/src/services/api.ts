@@ -555,6 +555,7 @@ export interface BatchMessageResult {
 
 /** The 20 latest batches of one session, without individual phone numbers or message payloads. */
 export interface BatchSummary {
+  awaitingReconnect?: boolean;
   batchId: string;
   status: BatchStatus;
   progress: BatchProgress;
@@ -564,6 +565,7 @@ export interface BatchSummary {
 
 /** GET batch/:batchId shape. */
 export interface BatchStatusResponse {
+  awaitingReconnect?: boolean;
   batchId: string;
   status: BatchStatus;
   progress: BatchProgress;

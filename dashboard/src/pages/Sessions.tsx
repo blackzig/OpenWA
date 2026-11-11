@@ -1238,6 +1238,16 @@ export function Sessions() {
                 <span className={`status-pill ${session.status}`}>{formatStatus(session.status)}</span>
               </div>
 
+              {session.status === 'disconnected' && (
+                <div className="session-reconnect-notice" role="status">
+                  {session.engineLoaded === false
+                    ? 'Sessão desconectada e sem conexão ativa. Use Iniciar para restabelecer o WhatsApp; um novo QR Code pode ser necessário.'
+                    : session.engineLoaded === true
+                      ? 'WhatsApp desconectado. Aguarde: o OpenWA está tentando restabelecer a conexão automaticamente. Evite iniciar outra sessão ou repetir disparos.'
+                      : 'WhatsApp desconectado. Verificando se há uma reconexão automática em andamento; não repita os disparos.'}
+                </div>
+              )}
+
               {awaitsPairing(session) ? (
                 <div className="qr-placeholder">
                   <QrCode size={80} className="qr-icon" />
