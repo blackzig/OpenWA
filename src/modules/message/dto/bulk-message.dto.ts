@@ -297,7 +297,10 @@ export class BatchMessageResultDto {
 
 /** A bounded batch summary without recipient phone numbers, contents or media. */
 export class BatchSummaryDto {
-  @ApiProperty({ description: 'True while the active bulk runner is waiting for this session to reconnect.', example: false })
+  @ApiProperty({
+    description: 'True while the active bulk runner is waiting for this session to reconnect.',
+    example: false,
+  })
   awaitingReconnect!: boolean;
 
   @ApiProperty({ example: 'batch_abc123' })
@@ -317,7 +320,10 @@ export class BatchSummaryDto {
 }
 
 export class BatchStatusResponseDto {
-  @ApiProperty({ description: 'True if the batch is suspended before its next recipient while WhatsApp reconnects.', example: false })
+  @ApiProperty({
+    description: 'True if the batch is suspended before its next recipient while WhatsApp reconnects.',
+    example: false,
+  })
   awaitingReconnect!: boolean;
 
   @ApiProperty({ example: 'batch_abc123' })
