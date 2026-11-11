@@ -266,6 +266,7 @@ describe('MessageController - caller-supplied batch ids', () => {
   const bulk = {
     getBatchStatus: jest.fn().mockResolvedValue({ batchId: 'history', status: 'processing' }),
     getNextSendAt: jest.fn().mockReturnValue(undefined),
+    isAwaitingReconnect: jest.fn().mockReturnValue(false),
     createBatch: jest.fn().mockResolvedValue({ batchId: 'run/1?x', status: 'pending', messages: [] }),
     listRecentBatches: jest.fn().mockResolvedValue([{ id: 'db1', batchId: 'batch_01', status: 'processing', progress: { total: 71, sent: 20, failed: 0, pending: 51, cancelled: 0 }, createdAt: new Date('2026-11-11T02:00:00Z'), updatedAt: new Date('2026-11-11T03:00:00Z') }]),
   };
