@@ -55,6 +55,6 @@ else
 fi
 
 echo "Staging status:"
-git -C "$STAGE" status --short | head -80
+git -C "$STAGE" status --short | sed -n '1,80p'
 echo "Production container and active worktree were not restarted or rebuilt."
 echo "Staging directory: $STAGE"
