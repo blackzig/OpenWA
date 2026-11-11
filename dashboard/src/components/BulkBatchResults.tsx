@@ -39,7 +39,6 @@ export function BulkBatchResults({ activeBatch, sessions }: Props) {
     if (!lookup) return;
     let alive = true;
     let inFlight = false;
-    let timer: ReturnType<typeof setInterval> | undefined;
     setHistoric(null);
     setLoading(true);
     setError('');
@@ -52,22 +51,22 @@ export function BulkBatchResults({ activeBatch, sessions }: Props) {
         if (!alive) return;
         setHistoric(next);
         setError('');
-        if (terminalStatuses.has(next.status) && timer) clearInterval(timer);
+        if (terminalStatuses.has(next.status)) clearInterval(timer);
       } catch (cause) {
         if (!alive) return;
         const status = (cause as { status?: number }).status;
         setError(cause instanceof Error ? cause.message : 'Falha ao consultar lote');
-        if ((status === 403 || status === 404) && timer) clearInterval(timer);
+        if ((status === 403 || status === 404)) clearInterval(timer);
       } finally {
         inFlight = false;
         if (alive) setLoading(false);
       }
     };
-    timer = setInterval(() => void refresh(), 2000);
+    const timer = setInterval(() => void refresh(), 2000);
     void refresh();
     return () => {
       alive = false;
-      if (timer) clearInterval(timer);
+      clearInterval(timer);
     };
   }, [lookup]);
 
