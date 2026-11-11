@@ -34,4 +34,22 @@ jobs:
       - name: Check TypeScript and compile dashboard
         run: npm run build
       - name: Lint new report modules
-        run: npx eslint src/components/BulkBatchResults.tsx src/utils/bulkBatchReport.ts src/utils/bulkBatchReport.test.ts src/pages/MessageTester.tsx
+        run: npx eslint src/components/BulkBatchResults.tsx src/components/DashboardBatchMonitor.tsx src/pages/Dashboard.tsx src/utils/bulkBatchReport.ts src/utils/bulkBatchReport.test.ts src/pages/MessageTester.tsx
+
+  gateway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: TypeScript backend compilation
+        run: npm run build
+      - name: Unit tests: controller and chat access
+        run: npx jest --runInBand src/modules/message/message.controller.spec.ts src/modules/auth/chat-scope-coverage.spec.ts
+      - name: Lint changed backend modules
+        run: npx eslint src/modules/message/bulk-message.service.ts src/modules/message/message.controller.ts src/modules/message/dto/bulk-message.dto.ts
