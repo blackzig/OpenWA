@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { messageApi, type BatchSummary, type Session } from '../services/api';
 import './DashboardBatchMonitor.css';
 
@@ -80,7 +81,11 @@ export function DashboardBatchMonitor({ sessions }: Props) {
           <h2>Acompanhamento dos envios em lote</h2>
           <p>Dados do servidor atualizados automaticamente a cada 5 segundos.</p>
         </div>
-        {selected && <span className={'dashboard-batch-state state-' + selected.status}>{names[selected.status]}</span>}
+        {selected && (
+          <span className={'dashboard-batch-state state-' + selected.status}>
+            {selected.awaitingReconnect ? 'Aguardando reconexão' : names[selected.status]}
+          </span>
+        )}
       </div>
       <div className="dashboard-batch-controls">
         <label>
@@ -114,6 +119,13 @@ export function DashboardBatchMonitor({ sessions }: Props) {
       {selected && (
         <>
           <div className="dashboard-batch-id">Lote <code>{selected.batchId}</code></div>
+          {selected.awaitingReconnect && (
+            <p className="dashboard-batch-connection-warning" role="status">
+              WhatsApp desconectado — envios pausados antes do próximo número. O sistema está tentando
+              reconectar automaticamente. Se solicitar autenticação, abra <Link to="/sessions">Sessões</Link> para
+              verificar o QR Code. Não reinicie o container nem reenvie o lote.
+            </p>
+          )}
           <div className="dashboard-batch-metrics">
             <div><strong>{total}</strong><span>Total</span></div>
             <div><strong>{sent}</strong><span>Enviadas</span></div>
