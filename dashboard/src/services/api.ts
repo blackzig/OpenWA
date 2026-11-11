@@ -553,6 +553,15 @@ export interface BatchMessageResult {
   sentAt?: string;
 }
 
+/** The 20 latest batches of one session, without individual phone numbers or message payloads. */
+export interface BatchSummary {
+  batchId: string;
+  status: BatchStatus;
+  progress: BatchProgress;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** GET batch/:batchId shape. */
 export interface BatchStatusResponse {
   batchId: string;
@@ -1160,6 +1169,8 @@ export const messageApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  listRecentBatches: (sessionId: string) =>
+    request<BatchSummary[]>(`/sessions/${sessionId}/messages/batches`),
   getBatchStatus: (sessionId: string, batchId: string) =>
     request<BatchStatusResponse>(`/sessions/${sessionId}/messages/batch/${encodeURIComponent(batchId)}`),
   cancelBatch: (sessionId: string, batchId: string) =>
