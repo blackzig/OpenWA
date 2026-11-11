@@ -266,6 +266,7 @@ describe('MessageController - caller-supplied batch ids', () => {
   const bulk = {
     getBatchStatus: jest.fn().mockResolvedValue({ batchId: 'history', status: 'processing' }),
     createBatch: jest.fn().mockResolvedValue({ batchId: 'run/1?x', status: 'pending', messages: [] }),
+    listRecentBatches: jest.fn().mockResolvedValue([{ id: 'db1', batchId: 'batch_01', status: 'processing', progress: { total: 71, sent: 20, failed: 0, pending: 51, cancelled: 0 }, createdAt: new Date('2026-11-11T02:00:00Z'), updatedAt: new Date('2026-11-11T03:00:00Z') }]),
   };
   const messages = { getChatHistory: jest.fn().mockResolvedValue([]) };
 
@@ -291,6 +292,20 @@ describe('MessageController - caller-supplied batch ids', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('lists session batches without returning database internals or message payloads', async () => {
+    const controller = new MessageController(
+      messages as unknown as MessageService,
+      bulk as unknown as BulkMessageService,
+      new ChatScopeService(),
+    );
+    const batches = await controller.listRecentBatches('s1');
+    expect(bulk.listRecentBatches).toHaveBeenCalledWith('s1');
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toMatchObject({ batchId: 'batch_01', status: 'processing' });
+    expect(batches[0]).not.toHaveProperty('id');
+    expect(batches[0]).not.toHaveProperty('messages');
   });
 
   it('percent-encodes the batch id in the returned statusUrl', async () => {
