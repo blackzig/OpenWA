@@ -79,3 +79,11 @@
   .bulk-results-lookup { align-items: stretch; }
   .bulk-results-lookup label { flex-basis: 100%; }
 }
+
+.bulk-results-waiting {
+  padding: .75rem 1rem;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 7px;
+  color: #92400e;
+}
