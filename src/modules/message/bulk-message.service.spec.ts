@@ -22,7 +22,7 @@ import { MessageBatch, BatchStatus, BatchMessageStatus, BatchMessageResult } fro
 import { MessageStatus } from './entities/message.entity';
 import { SendBulkMessageDto } from './dto/bulk-message.dto';
 import { EngineRegistry } from '../../engine/engine-registry.service';
-import type { IWhatsAppEngine } from '../../engine/interfaces/whatsapp-engine.interface';
+import { EngineStatus, type IWhatsAppEngine } from '../../engine/interfaces/whatsapp-engine.interface';
 import { MessageService } from './message.service';
 import { SendPacingService, SEND_PACING_LIMITED } from './send-pacing.service';
 import { SessionOwnershipService } from '../session/session-ownership.service';
@@ -961,19 +961,47 @@ describe('BulkMessageService.processBatch', () => {
     expect(replacement.sendTextMessage).toHaveBeenCalledWith('c1@c.us', 'hi');
   });
 
-  it('fails only the item whose engine is gone mid-batch, without feeding the send breaker', async () => {
-    repo.findOne.mockResolvedValue(makeBatch(2));
+  it('pauses after an engine disappears, then continues at the next unsent recipient after reconnect', async () => {
+    const batch = makeBatch(2);
+    repo.findOne.mockImplementation(({ select }: { select?: { status?: boolean } }) =>
+      Promise.resolve(select?.status ? { status: BatchStatus.PROCESSING } : batch),
+    );
+    const replacement = { sendTextMessage: jest.fn().mockResolvedValue({ id: 'wa2', timestamp: 222 }) };
     engine.sendTextMessage.mockImplementationOnce(() => {
       engines.delete('s1');
+      setTimeout(() => engines.set('s1', replacement as unknown as IWhatsAppEngine), 50);
       return Promise.resolve({ id: 'wa1', timestamp: 111 });
     });
 
     await runProcessBatch();
 
     const finalPartial = (repo.update.mock.calls as Array<[unknown, { results: BatchMessageResult[] }]>).at(-1)![1];
-    expect(finalPartial.results.map(r => r.status)).toEqual([BatchMessageStatus.SENT, BatchMessageStatus.FAILED]);
-    expect(finalPartial.results[1].error?.message).toMatch(/not connected/i);
+    expect(finalPartial.results.map(r => r.status)).toEqual([BatchMessageStatus.SENT, BatchMessageStatus.SENT]);
+    expect(engine.sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(replacement.sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(replacement.sendTextMessage).toHaveBeenCalledWith('c1@c.us', 'hi');
     expect(pacing.recordSendFailure).not.toHaveBeenCalled();
+    expect(service.isAwaitingReconnect('b1')).toBe(false);
+  });
+
+  it('pauses before the first item when the registered engine reports DISCONNECTED', async () => {
+    const batch = makeBatch(1);
+    repo.findOne.mockImplementation(({ select }: { select?: { status?: boolean } }) =>
+      Promise.resolve(select?.status ? { status: BatchStatus.PROCESSING } : batch),
+    );
+    let status = EngineStatus.DISCONNECTED;
+    engines.set('s1', {
+      sendTextMessage: engine.sendTextMessage,
+      getStatus: () => status,
+    } as unknown as IWhatsAppEngine);
+    setTimeout(() => { status = EngineStatus.READY; }, 50);
+
+    await runProcessBatch();
+
+    expect(engine.sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(batch.currentIndex).toBe(1);
+    expect(batch.progress.failed).toBe(0);
+    expect(service.isAwaitingReconnect('b1')).toBe(false);
   });
 
   // The create-time check sees the raw input; a gate rewrite can still empty an item out.
