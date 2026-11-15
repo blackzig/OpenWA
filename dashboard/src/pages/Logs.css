@@ -12,8 +12,36 @@
 
 .logs-page .filters-bar {
   display: flex;
+  flex-wrap: wrap;
+  align-items: end;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.logs-page .audit-period-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.logs-page .audit-period-field input {
+  box-sizing: border-box;
+  min-height: 42px;
+  max-width: 100%;
+  width: 170px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-white);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.logs-page .audit-period-field input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .logs-page .search-input {
@@ -263,6 +291,11 @@
 
   .logs-page .search-input {
     max-width: none;
+  }
+
+  .logs-page .audit-period-field,
+  .logs-page .audit-period-field input {
+    width: 100%;
   }
 
   .logs-page .filter-group {
