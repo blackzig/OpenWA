@@ -881,6 +881,11 @@
     "subtitle": "Track and review all API actions and system events",
     "exportCsv": "Export CSV",
     "searchPlaceholder": "Search logs...",
+    "filters": {
+      "sessionId": "Session ID",
+      "from": "From",
+      "to": "Through"
+    },
     "severity": {
       "all": "All Severities",
       "info": "Info",
@@ -898,9 +903,9 @@
     "empty": {
       "title": "No logs found",
       "description": "Audit logs will appear here as actions are performed",
-      "filteredTitle": "No matches on this page",
-      "filteredDescription": "The search filters the current page only. Clear it, page through, or use the severity filter to narrow server-side.",
-      "filteredServerDescription": "No logs match these filters. Adjust the severity filter to widen the search."
+      "filteredTitle": "No matching audit records",
+      "filteredDescription": "The search checks the full audit history. Try clearing one or more filters.",
+      "filteredServerDescription": "No audit records match these filters."
     },
     "exportFailed": "Couldn't export the audit log",
     "exportTruncated": "The export covers only the newest {{rows}} entries. Narrow the severity filter to export older ones.",
