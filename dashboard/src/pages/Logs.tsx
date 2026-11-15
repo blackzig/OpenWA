@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Search, Filter, Loader2, FileText, AlertCircle } from 'lucide-react';
 import type { AuditLog } from '../services/api';
@@ -13,35 +13,61 @@ import { fetchAllPages } from '../utils/fetchAllPages';
 import { escapeCsvCell } from '../utils/csv';
 import './Logs.css';
 
+// Browser-local calendar days converted into precise UTC instants for [from, to).
+const dayStart = (day: string): string | undefined => (day ? new Date(`${day}T00:00:00`).toISOString() : undefined);
+const dayAfter = (day: string): string | undefined => {
+  if (!day) return undefined;
+  const date = new Date(`${day}T00:00:00`);
+  date.setDate(date.getDate() + 1);
+  return date.toISOString();
+};
+
 export function Logs() {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   useDocumentTitle(t('logs.title'));
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sessionIdFilter, setSessionIdFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const limit = 20;
 
   const severityParam = severityFilter !== 'all' ? severityFilter : undefined;
-  const { data, isLoading: loading, isError: logsError } = useLogsQuery({ severity: severityParam, page, limit });
+  const from = dayStart(fromDate);
+  const to = dayAfter(toDate);
+  // Avoid a server request per keystroke; show pending search state during the debounce.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  const { data, isLoading: loading, isError: logsError } = useLogsQuery({
+    severity: severityParam,
+    search: debouncedSearch || undefined,
+    sessionId: sessionIdFilter.trim() || undefined,
+    from,
+    to,
+    page,
+    limit,
+  });
   const logs: AuditLog[] = data?.data ?? [];
   const total: number = data?.total ?? 0;
 
-  // Trimmed once, so the table, its empty state and the export agree on whether a search is active.
+  // The API searches all pages; this local predicate also keeps the displayed and exported rows aligned.
   const q = searchQuery.trim().toLowerCase();
   const matchesSearch = (log: AuditLog) =>
-    log.action.toLowerCase().includes(q) || (log.errorMessage || '').toLowerCase().includes(q);
+    [log.action, log.errorMessage, log.sessionName, log.sessionId]
+      .some(value => (value ?? '').toLowerCase().includes(q));
   const filteredLogs = logs.filter(matchesSearch);
 
   const totalPages = Math.ceil(total / limit);
-  // Distinguish "filters matched nothing on this page" from "there are no logs at all": the search
-  // box only filters the fetched page (the API has no text search), so a non-match here must not
-  // read as "no such event exists" while more pages may hold it.
+  // A changed query is not yet reflected in data until the debounce completes.
   const hasSearch = q !== '';
-  // Severity is enforced SERVER-SIDE (the query carries it): an empty result there means no logs
-  // match at all, which deserves different guidance than the page-local search box.
-  const hasSeverityFilter = severityFilter !== 'all';
+  const hasSeverityFilter = severityFilter !== 'all' || !!sessionIdFilter.trim() || !!fromDate || !!toDate;
+  const searchPending = q !== debouncedSearch.toLowerCase();
 
   const formatTimestamp = (date: string) => new Date(date).toLocaleString();
 
@@ -95,7 +121,15 @@ export function Logs() {
     setExporting(true);
     try {
       const { items, truncated, throttled } = await fetchAllPages<AuditLog>((limit, offset) =>
-        auditApi.list({ severity: severityParam, limit, offset }),
+        auditApi.list({
+          severity: severityParam,
+          search: searchQuery.trim() || undefined,
+          sessionId: sessionIdFilter.trim() || undefined,
+          from,
+          to,
+          limit,
+          offset,
+        }),
       );
       // The walk pages by offset over a live table, newest first: a row written between two pages pushes
       // the older ones down, so the next page starts with one already fetched. Keep each id once.
@@ -150,6 +184,7 @@ export function Logs() {
             type="text"
             placeholder={t('logs.searchPlaceholder')}
             value={searchQuery}
+            maxLength={120}
             onChange={e => {
               setSearchQuery(e.target.value);
               // A new query invalidates the current page position, like the severity filter below.
@@ -176,6 +211,21 @@ export function Logs() {
             ariaLabel={t('logs.columns.severity')}
           />
         </div>
+        <label className="audit-period-field">
+          <span>{t('logs.filters.sessionId')}</span>
+          <input type="text" value={sessionIdFilter} maxLength={36}
+            onChange={e => { setSessionIdFilter(e.target.value); setPage(1); }} />
+        </label>
+        <label className="audit-period-field">
+          <span>{t('logs.filters.from')}</span>
+          <input type="date" value={fromDate} max={toDate || undefined}
+            onChange={e => { setFromDate(e.target.value); setPage(1); }} />
+        </label>
+        <label className="audit-period-field">
+          <span>{t('logs.filters.to')}</span>
+          <input type="date" value={toDate} min={fromDate || undefined}
+            onChange={e => { setToDate(e.target.value); setPage(1); }} />
+        </label>
       </div>
 
       <div className="logs-table-container">
@@ -198,6 +248,10 @@ export function Logs() {
             // Nothing was read, so no "no logs" copy: the banner above reports the failure on its own.
             <div className="empty-table-state">
               <AlertCircle size={32} />
+            </div>
+          ) : searchPending ? (
+            <div className="empty-table-state">
+              <Loader2 size={32} className="animate-spin" />
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="empty-table-state">
