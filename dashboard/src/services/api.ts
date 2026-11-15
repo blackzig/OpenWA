@@ -1297,10 +1297,14 @@ export const apiKeyApi = {
 // =============================================================================
 
 export const auditApi = {
-  list: (params?: { action?: string; severity?: string; limit?: number; offset?: number }) => {
+  list: (params?: { action?: string; severity?: string; sessionId?: string; search?: string; from?: string; to?: string; limit?: number; offset?: number }) => {
     const query = new URLSearchParams();
     if (params?.action) query.set('action', params.action);
     if (params?.severity) query.set('severity', params.severity);
+    if (params?.sessionId) query.set('sessionId', params.sessionId);
+    if (params?.search) query.set('search', params.search);
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
     if (params?.limit) query.set('limit', String(params.limit));
     if (params?.offset) query.set('offset', String(params.offset));
     const queryStr = query.toString();
