@@ -67,7 +67,6 @@ export function Logs() {
   // A changed query is not yet reflected in data until the debounce completes.
   const hasSearch = q !== '';
   const hasSeverityFilter = severityFilter !== 'all' || !!sessionIdFilter.trim() || !!fromDate || !!toDate;
-  const searchPending = q !== debouncedSearch.toLowerCase();
 
   const formatTimestamp = (date: string) => new Date(date).toLocaleString();
 
@@ -248,10 +247,6 @@ export function Logs() {
             // Nothing was read, so no "no logs" copy: the banner above reports the failure on its own.
             <div className="empty-table-state">
               <AlertCircle size={32} />
-            </div>
-          ) : searchPending ? (
-            <div className="empty-table-state">
-              <Loader2 size={32} className="animate-spin" />
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="empty-table-state">
