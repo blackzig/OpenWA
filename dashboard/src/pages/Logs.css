@@ -165,7 +165,9 @@
 .logs-page .api-key {
   font-family: monospace;
   font-size: 0.8125rem;
-  white-space: nowrap;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .logs-page .ip {

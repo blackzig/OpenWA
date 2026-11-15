@@ -167,6 +167,15 @@ test('the log table renders rows whose nullable fields are null without crashing
   assert.ok(!container.textContent?.includes('null'), 'no raw null leaks into the DOM');
 });
 
+test('audit API-key labels wrap within their column instead of overlapping the IP address', () => {
+  const css = readFileSync(new URL('./Logs.css', import.meta.url), 'utf8');
+  const rule = css.match(/\.logs-page \.api-key\s*\{([^}]*)\}/);
+  assert.ok(rule, 'API-key cell style is missing');
+  assert.match(rule[1], /\bmin-width:\s*0\s*;/);
+  assert.match(rule[1], /\bwhite-space:\s*normal\s*;/);
+  assert.match(rule[1], /\boverflow-wrap:\s*anywhere\s*;/);
+});
+
 test('a failed full export is reported, and the rows on screen are not downloaded in its place', async () => {
   const { screen, fireEvent } = rtl;
   const { downloads, restore } = recordDownloads();
