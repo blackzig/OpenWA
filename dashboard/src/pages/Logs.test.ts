@@ -55,6 +55,7 @@ function jsonResponse(data: unknown): Response {
 
 // When set, the export's page walk (limit=200) fails with this status; the on-screen page still loads.
 let exportFailure: number | null = null;
+const auditRequests: string[] = [];
 // When set, the export's page walk sees a table of this many rows, served 200 at a time.
 let exportTotal: number | null = null;
 // When set, every export page from this offset on is refused with a 429, as a tripped minute tier does.
@@ -78,6 +79,7 @@ function exportRow(i: number): AuditLog {
 function installFetchStub(): void {
   globalThis.fetch = ((input: RequestInfo | URL): Promise<Response> => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    auditRequests.push(url);
     if (exportFailure && url.includes('limit=200')) {
       return Promise.resolve(new Response(JSON.stringify({ message: 'boom' }), { status: exportFailure }));
     }
@@ -145,7 +147,7 @@ before(async () => {
   ({ Logs } = await import('./Logs.tsx'));
 });
 
-afterEach(() => rtl.cleanup());
+afterEach(() => { rtl.cleanup(); auditRequests.length = 0; });
 
 function renderLogs(gcTime?: number): HTMLElement {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime } } });
@@ -434,5 +436,47 @@ test('a failed read does not say that no logs exist', async () => {
     );
   } finally {
     listFailure = null;
+  }
+});
+
+
+test('audit filters search the backend by text, exact session id and local calendar days', async () => {
+  const { screen, fireEvent, waitFor } = rtl;
+  renderLogs();
+  await screen.findByText('infra.restart');
+  fireEvent.change(screen.getByPlaceholderText('Search logs...'), { target: { value: 'stop' } });
+  fireEvent.change(screen.getByLabelText('Session ID'), { target: { value: 'sess-1' } });
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-11-13' } });
+  fireEvent.change(screen.getByLabelText('Through'), { target: { value: '2026-11-14' } });
+  await waitFor(() => {
+    const matched = auditRequests.some(url => {
+      const params = new URL(url, 'http://localhost').searchParams;
+      return params.get('search') === 'stop' && params.get('sessionId') === 'sess-1'
+        && params.get('from') === new Date('2026-11-13T00:00:00').toISOString()
+        && params.get('to') === new Date('2026-11-15T00:00:00').toISOString();
+    });
+    assert.ok(matched, 'API did not receive the complete audit filter set');
+  }, { timeout: 5000 });
+});
+
+test('CSV export sends the same filters to the API, not only the currently visible page', async () => {
+  const { screen, fireEvent, waitFor } = rtl;
+  const { downloads, restore } = recordDownloads();
+  try {
+    renderLogs();
+    await screen.findByText('infra.restart');
+    fireEvent.change(screen.getByPlaceholderText('Search logs...'), { target: { value: 'stop' } });
+    fireEvent.change(screen.getByLabelText('Session ID'), { target: { value: 'sess-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    await waitFor(() => {
+      assert.ok(auditRequests.some(url => {
+        const params = new URL(url, 'http://localhost').searchParams;
+        return params.get('limit') === '200' && params.get('search') === 'stop'
+          && params.get('sessionId') === 'sess-1';
+      }), 'CSV export did not pass active server-side filters');
+      assert.equal(downloads.length, 1);
+    });
+  } finally {
+    restore();
   }
 });
