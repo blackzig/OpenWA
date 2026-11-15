@@ -837,6 +837,11 @@
     "subtitle": "Rastrea y revisa todas las acciones de la API y eventos del sistema",
     "exportCsv": "Exportar CSV",
     "searchPlaceholder": "Buscar registros...",
+    "filters": {
+      "sessionId": "ID de sesión",
+      "from": "Desde",
+      "to": "Hasta"
+    },
     "severity": {
       "all": "Todas las severidades",
       "info": "Info",
@@ -854,9 +859,9 @@
     "empty": {
       "title": "No se encontraron registros",
       "description": "Los registros de auditoría aparecerán aquí cuando se realicen acciones",
-      "filteredTitle": "Sin coincidencias en esta página",
-      "filteredDescription": "La búsqueda filtra solo la página actual. Bórrala, navega entre páginas o usa el filtro de severidad para acotar en el servidor.",
-      "filteredServerDescription": "Ningún registro coincide con estos filtros. Ajusta el filtro de severidad para ampliar la búsqueda."
+      "filteredTitle": "No hay registros coincidentes",
+      "filteredDescription": "La búsqueda consulta todo el historial de auditoría. Prueba a quitar algunos filtros.",
+      "filteredServerDescription": "Ningún registro de auditoría coincide con estos filtros."
     },
     "exportFailed": "No se pudo exportar el registro de auditoría",
     "exportTruncated": "La exportación solo abarca las {{rows}} entradas más recientes. Restringe el filtro de severidad para exportar las más antiguas.",
