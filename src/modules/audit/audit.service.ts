@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, In } from 'typeorm';
+import { Repository, LessThan, In, And, Equal, FindOperator, FindOptionsWhere, MoreThanOrEqual, Raw } from 'typeorm';
 import { AuditLog, AuditAction, AuditSeverity } from './entities/audit-log.entity';
 import { ApiKey } from '../auth/entities/api-key.entity';
 import { createLogger } from '../../common/services/logger.service';
@@ -42,6 +42,12 @@ export interface AuditQueryOptions {
   severity?: AuditSeverity;
   limit?: number;
   offset?: number;
+  /** Case-insensitive substring search across action, error, session name and id. */
+  search?: string;
+  /** Inclusive UTC timestamp. */
+  from?: Date;
+  /** Exclusive UTC timestamp. */
+  to?: Date;
 }
 
 @Injectable()
@@ -148,7 +154,7 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
     data: AuditLog[];
     total: number;
   }> {
-    const where: Record<string, unknown> = {};
+    const where: FindOptionsWhere<AuditLog> = {};
 
     if (options.action) where.action = options.action;
     if (options.apiKeyId) where.apiKeyId = options.apiKeyId;
@@ -161,13 +167,33 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
       where.sessionId = In(sessionScope);
     }
     if (options.severity) where.severity = options.severity;
+    // Keep timestamps in the repository query: filtering a fetched page hides older matches.
+    if (options.from && options.to) where.createdAt = And(MoreThanOrEqual(options.from), LessThan(options.to));
+    else if (options.from) where.createdAt = MoreThanOrEqual(options.from);
+    else if (options.to) where.createdAt = LessThan(options.to);
+
+    // Raw uses bound parameters, not interpolated user text. instr() treats '%', '_' and
+    // backslashes literally, unlike LIKE. Every OR arm retains the session-scope and date fences.
+    const search = options.search?.trim().toLowerCase();
+    const filteredWhere: FindOptionsWhere<AuditLog> | FindOptionsWhere<AuditLog>[] = search
+      ? (['action', 'errorMessage', 'sessionName', 'sessionId'] as const).map(field => {
+          const needle = Raw(alias => `instr(lower(coalesce(${alias}, '')), :auditNeedle) > 0`, {
+            auditNeedle: search,
+          });
+          const previous = where[field];
+          const match = previous === undefined
+            ? needle
+            : And(previous instanceof FindOperator ? previous : Equal(previous as string), needle);
+          return { ...where, [field]: match };
+        })
+      : where;
 
     // Clamp the page size so an arbitrarily large `limit` can't load the whole table into one response.
     const requested = options.limit && options.limit > 0 ? options.limit : 50;
     const take = Math.min(requested, MAX_AUDIT_PAGE_SIZE);
 
     const [data, total] = await this.auditRepository.findAndCount({
-      where,
+      where: filteredWhere,
       // createdAt has one-second precision, so rows written in the same second tie; the unique id gives
       // them one fixed order, or separate LIMIT/OFFSET pages could repeat one row and skip another.
       order: { createdAt: 'DESC', id: 'DESC' },
