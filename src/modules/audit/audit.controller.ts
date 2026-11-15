@@ -8,7 +8,7 @@ import { ApiKey, ApiKeyRole } from '../auth/entities/api-key.entity';
 
 /** Accept only normalized UTC ISO timestamps, so an ambiguous date cannot silently shift a day. */
 function auditTimestamp(value: unknown, field: string): Date {
-  if (typeof value !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(value)) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\\.\d{3}Z$/.test(value)) {
     throw new BadRequestException(`${field} must be a UTC ISO-8601 timestamp`);
   }
   const parsed = new Date(value);
