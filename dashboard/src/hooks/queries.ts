@@ -18,6 +18,16 @@ import {
   type UpdateInstanceInput,
 } from '../services/api';
 
+type AuditLogsQueryParams = {
+  severity?: string;
+  search?: string;
+  sessionId?: string;
+  from?: string;
+  to?: string;
+  page: number;
+  limit: number;
+};
+
 // ── Query Keys ────────────────────────────────────────────────────────
 
 export const queryKeys = {
@@ -28,7 +38,7 @@ export const queryKeys = {
   webhooks: ['webhooks'] as const,
   templates: (sessionId: string) => ['sessions', sessionId, 'templates'] as const,
   apiKeys: ['apiKeys'] as const,
-  logs: (params: { severity?: string; page: number; limit: number }) => ['logs', params] as const,
+  logs: (params: AuditLogsQueryParams) => ['logs', params] as const,
   infraStatus: ['infra', 'status'] as const,
   plugins: ['plugins'] as const,
   pluginInstances: (pluginId: string) => ['plugins', pluginId, 'instances'] as const,
@@ -266,12 +276,16 @@ export function useRevokeApiKeyMutation() {
 
 // ── Logs Queries ──────────────────────────────────────────────────────
 
-export function useLogsQuery(params: { severity?: string; page: number; limit: number }) {
+export function useLogsQuery(params: AuditLogsQueryParams) {
   return useQuery({
     queryKey: queryKeys.logs(params),
     queryFn: () =>
       auditApi.list({
         severity: params.severity,
+        search: params.search,
+        sessionId: params.sessionId,
+        from: params.from,
+        to: params.to,
         limit: params.limit,
         offset: (params.page - 1) * params.limit,
       }),
