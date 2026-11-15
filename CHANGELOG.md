@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-11-15
+
+### Added
+
+- Report poll votes as `poll.vote` on Baileys, as whatsapp-web.js already does. A vote is read while the poll's creation message is still in the session's message store (`BAILEYS_MESSAGE_STORE_LIMIT`); earlier votes are not backfilled (#2063). Thanks @Shreyas1702003 for the report.
+
+### Fixed
+
+- whatsapp-web.js: an entry WhatsApp Web keeps in a chat that nobody sent (a group or security notice, or a kind the library does not list that carries neither text nor media) is no longer stored or announced as an `unknown` message, returned by the chat history, seeded as an empty status or reported as a chat's last message (#2076). Thanks @OneArmArmy for the report.
+- whatsapp-web.js: the chat history returns a message deleted for everyone under the id the message had, where it returned the id of the delete notice, so it no longer shows beside its stored copy (#2076).
+- whatsapp-web.js: `GET /sessions/{sessionId}/channels/{channelId}/messages` no longer returns a deleted channel update as an entry with an empty `body` (#2077). Thanks @OneArmArmy for the report.
+- Dashboard: a message deleted for everyone is shown once in the chat window of a whatsapp-web.js session, where the stored row and WhatsApp Web's own placeholder for it were both drawn (#2076).
+- Dashboard: an entry with nothing to show no longer draws an empty bubble: an `unknown` message with no text, media or quote in the chat window, or a channel update with neither text nor media in the Channels tab (#2076, #2077).
+- Dashboard: a message known only from WhatsApp Web's history no longer shows read ticks, since the history carries no delivery status.
+- `ctx.mappings.get` and `ctx.mappings.getByProvider` report the handover a plugin instance holds for a chat across its `@lid` and phone rows (`human`, else `closed`, else `bot`), so a plugin reading one row no longer misses a takeover recorded under the other.
+- Store the contact statuses WhatsApp delivers to some Baileys accounts as a top-level `<status>` stanza, which 0.30.1 acknowledged and dropped: `scripts/patch-baileys-status-ack.js` now decodes a stanza shaped as the status message it replaces, so it reaches the status list and the `status.received` webhook. A status that fails to decrypt is dropped, not retried (#2064). Thanks @damar-glh for the report.
+- A Baileys message or status that decrypts only in part and is left with no content is no longer stored or announced as an empty `unknown` message, so a redelivery that carries the content is not skipped as a duplicate.
+- A status the account posted is no longer listed among contact statuses on Baileys when WhatsApp names its poster by the account's lid.
+- Cap `poll.vote` at 32 `selectedOptions` of 1024 characters each and `pollName` at 1024 characters on both engines, as an inbound poll already is.
+- Read a contact's encrypted edit or reaction on Baileys when its key names one party by lid and the other by phone number without the alternate id, using the pairing the session already holds.
+
+## [0.30.1] - 2026-11-14
+
+### Added
+
+- Log when an unlink clears the stored messages and chat states of a Baileys session, where only a failed clear was logged, and document that a reply, forward or reaction to a message from before the unlink answers `404` from then on (#2061). Thanks @rivenash for the report.
+
+### Changed
+
+- The amd64 image's Chrome for Testing 157.0.8103.50 to 157.0.8103.78, the current Stable; the arm64 image keeps the chromium package Debian ships.
+
+### Fixed
+
+- Acknowledge the top-level `<status>` stanza that WhatsApp now sends some Baileys accounts in place of a status message, so the server stops closing the stream about 50 minutes later with `Stream Errored (ack)`: a new install-time patch, `scripts/patch-baileys-status-ack.js`, acknowledges and drops it, and a status delivered this way still does not reach the status store (#2064). Thanks @damar-glh for the report.
+
 ## [0.30.0] - 2026-11-10
 
 ### Added
