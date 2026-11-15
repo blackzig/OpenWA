@@ -59,4 +59,33 @@ describe('AuditController filter validation', () => {
     await controller.findAll(undefined, undefined, undefined, 's1', 'key-1', '25', '50');
     expect(findAll).toHaveBeenCalledWith({ sessionId: 's1', apiKeyId: 'key-1', limit: 25, offset: 50 }, undefined);
   });
+
+  it('passes validated full-history search and exclusive date bounds to the service', async () => {
+    await controller.findAll(
+      undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+      '  RESTRICTED  ', '2026-11-13T00:00:00.000Z', '2026-11-15T00:00:00.000Z',
+    );
+    expect(findAll).toHaveBeenCalledWith({
+      search: 'RESTRICTED',
+      from: new Date('2026-11-13T00:00:00.000Z'),
+      to: new Date('2026-11-15T00:00:00.000Z'),
+    }, undefined);
+  });
+
+  it('rejects repeated or oversized text, non-UTC timestamps and reversed date windows', async () => {
+    await expect(controller.findAll(
+      undefined, undefined, undefined, undefined, undefined, undefined, undefined, ['a','b'] as never,
+    )).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.findAll(
+      undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'x'.repeat(121),
+    )).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.findAll(
+      undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'x', '2026-11-15',
+    )).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.findAll(
+      undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'x',
+      '2026-11-15T00:00:00.000Z', '2026-11-14T00:00:00.000Z',
+    )).rejects.toBeInstanceOf(BadRequestException);
+    expect(findAll).not.toHaveBeenCalled();
+  });
 });
