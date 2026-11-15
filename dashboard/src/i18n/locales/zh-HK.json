@@ -881,6 +881,11 @@
     "subtitle": "追蹤及查看所有 API 操作和系統事件",
     "exportCsv": "匯出 CSV",
     "searchPlaceholder": "搜尋記錄...",
+    "filters": {
+      "sessionId": "工作階段 ID",
+      "from": "開始日期",
+      "to": "結束日期"
+    },
     "severity": {
       "all": "所有嚴重程度",
       "info": "資訊",
@@ -898,9 +903,9 @@
     "empty": {
       "title": "找不到記錄",
       "description": "執行操作後，審計記錄會顯示在這裡",
-      "filteredTitle": "本頁無符合項目",
-      "filteredDescription": "搜尋只會過濾目前頁面。請清除搜尋、翻頁，或使用嚴重程度篩選在伺服器端收窄。",
-      "filteredServerDescription": "沒有符合這些篩選條件的日誌。請調整嚴重程度篩選以擴大搜尋範圍。"
+      "filteredTitle": "沒有符合的審計紀錄",
+      "filteredDescription": "搜尋涵蓋完整審計紀錄。請嘗試清除部分篩選條件。",
+      "filteredServerDescription": "沒有符合所選篩選條件的審計紀錄。"
     },
     "exportFailed": "無法匯出審計記錄",
     "exportTruncated": "匯出僅涵蓋最新的 {{rows}} 條記錄。請收窄嚴重程度篩選範圍以匯出較早的項目。",
