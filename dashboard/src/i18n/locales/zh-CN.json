@@ -881,6 +881,11 @@
     "subtitle": "跟踪并查看所有 API 操作和系统事件",
     "exportCsv": "导出 CSV",
     "searchPlaceholder": "搜索日志...",
+    "filters": {
+      "sessionId": "会话 ID",
+      "from": "开始日期",
+      "to": "结束日期"
+    },
     "severity": {
       "all": "所有严重级别",
       "info": "信息",
@@ -898,9 +903,9 @@
     "empty": {
       "title": "未找到日志",
       "description": "执行操作后，审计日志将显示在这里",
-      "filteredTitle": "本页无匹配项",
-      "filteredDescription": "搜索仅过滤当前页。请清除搜索、翻页，或使用严重级别筛选在服务端收窄。",
-      "filteredServerDescription": "没有符合这些筛选条件的日志。请调整严重级别筛选以扩大搜索范围。"
+      "filteredTitle": "没有匹配的审计记录",
+      "filteredDescription": "搜索覆盖全部审计历史。请尝试清除部分筛选条件。",
+      "filteredServerDescription": "没有符合所选筛选条件的审计记录。"
     },
     "exportFailed": "无法导出审计日志",
     "exportTruncated": "导出仅涵盖最新的 {{rows}} 条记录。请缩小严重级别筛选范围以导出更早的条目。",
