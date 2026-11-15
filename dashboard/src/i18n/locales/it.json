@@ -887,6 +887,11 @@
     "subtitle": "Traccia ed esamina tutte le azioni API e gli eventi di sistema",
     "exportCsv": "Esporta CSV",
     "searchPlaceholder": "Cerca nei log...",
+    "filters": {
+      "sessionId": "ID sessione",
+      "from": "Da",
+      "to": "A"
+    },
     "severity": {
       "all": "Tutte le gravità",
       "info": "Info",
@@ -904,9 +909,9 @@
     "empty": {
       "title": "Nessun log trovato",
       "description": "I log di audit appariranno qui man mano che verranno eseguite le azioni",
-      "filteredTitle": "Nessuna corrispondenza in questa pagina",
-      "filteredDescription": "La ricerca filtra solo la pagina corrente. Cancellala, sfoglia le pagine o usa il filtro severità lato server.",
-      "filteredServerDescription": "Nessun log corrisponde a questi filtri. Modifica il filtro severità per ampliare la ricerca."
+      "filteredTitle": "Nessun registro corrispondente",
+      "filteredDescription": "La ricerca esamina tutta la cronologia di audit. Prova a rimuovere alcuni filtri.",
+      "filteredServerDescription": "Nessun registro di audit corrisponde ai filtri selezionati."
     },
     "exportFailed": "Impossibile esportare il log di controllo",
     "exportTruncated": "L'esportazione copre solo le {{rows}} voci più recenti. Restringi il filtro severità per esportare quelle più vecchie.",
