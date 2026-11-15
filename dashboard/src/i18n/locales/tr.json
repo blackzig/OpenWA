@@ -881,6 +881,11 @@
     "subtitle": "Tüm API işlemlerini ve sistem olaylarını takip edip inceleyin",
     "exportCsv": "CSV Olarak Dışa Aktar",
     "searchPlaceholder": "Kayıtlarda ara...",
+    "filters": {
+      "sessionId": "Oturum kimliği",
+      "from": "Başlangıç",
+      "to": "Bitiş"
+    },
     "severity": {
       "all": "Tüm Önem Düzeyleri",
       "info": "Bilgi (Info)",
@@ -898,9 +903,9 @@
     "empty": {
       "title": "Kayıt bulunamadı",
       "description": "İşlemler gerçekleştirildikçe denetim kayıtları burada görünecektir",
-      "filteredTitle": "Bu sayfada eşleşme yok",
-      "filteredDescription": "Arama yalnızca geçerli sayfayı filtreler. Temizleyin, sayfalar arasında gezinin veya sunucu tarafında önem filtresini kullanın.",
-      "filteredServerDescription": "Bu filtrelerle eşleşen log yok. Aramayı genişletmek için önem filtresini ayarlayın."
+      "filteredTitle": "Eşleşen denetim kaydı yok",
+      "filteredDescription": "Arama tüm denetim geçmişini tarar. Bazı filtreleri kaldırmayı deneyin.",
+      "filteredServerDescription": "Bu filtrelere uyan denetim kaydı yok."
     },
     "exportFailed": "Denetim kaydı dışa aktarılamadı",
     "exportTruncated": "Dışa aktarma yalnızca en yeni {{rows}} kaydı kapsar. Daha eski kayıtları dışa aktarmak için önem filtresini daraltın.",
