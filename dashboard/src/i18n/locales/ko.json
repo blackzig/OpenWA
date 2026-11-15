@@ -881,6 +881,11 @@
     "subtitle": "모든 API 작업과 시스템 이벤트를 추적하고 검토하세요",
     "exportCsv": "CSV로 내보내기",
     "searchPlaceholder": "로그 검색...",
+    "filters": {
+      "sessionId": "세션 ID",
+      "from": "시작일",
+      "to": "종료일"
+    },
     "severity": {
       "all": "모든 심각도",
       "info": "정보",
@@ -898,9 +903,9 @@
     "empty": {
       "title": "로그가 없습니다",
       "description": "작업이 수행되면 감사 로그가 여기에 표시됩니다",
-      "filteredTitle": "이 페이지에 일치하는 항목이 없습니다",
-      "filteredDescription": "검색은 현재 페이지만 필터링합니다. 지우거나 페이지를 이동하거나 서버 측 심각도 필터를 사용하세요.",
-      "filteredServerDescription": "이 필터에 일치하는 로그가 없습니다. 검색 범위를 넓히려면 심각도 필터를 조정하세요."
+      "filteredTitle": "일치하는 감사 로그 없음",
+      "filteredDescription": "전체 감사 기록을 검색합니다. 필터를 일부 해제해 보세요.",
+      "filteredServerDescription": "선택한 필터와 일치하는 감사 로그가 없습니다."
     },
     "exportFailed": "감사 로그를 내보내지 못했습니다",
     "exportTruncated": "내보내기에는 최신 항목 {{rows}}개만 포함됩니다. 이전 항목을 내보내려면 심각도 필터를 좁히세요.",
