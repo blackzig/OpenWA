@@ -881,6 +881,11 @@
     "subtitle": "Lacak dan tinjau semua aksi API dan kejadian sistem",
     "exportCsv": "Ekspor CSV",
     "searchPlaceholder": "Cari log...",
+    "filters": {
+      "sessionId": "ID sesi",
+      "from": "Dari",
+      "to": "Sampai"
+    },
     "severity": {
       "all": "Semua Tingkat",
       "info": "Info",
@@ -898,9 +903,9 @@
     "empty": {
       "title": "Tidak ada log ditemukan",
       "description": "Log audit akan muncul di sini saat aksi dilakukan",
-      "filteredTitle": "Tidak ada yang cocok di halaman ini",
-      "filteredDescription": "Pencarian memfilter halaman saat ini saja. Kosongkan pencarian, buka halaman lain, atau gunakan filter tingkat keparahan untuk mempersempit di sisi server.",
-      "filteredServerDescription": "Tidak ada log yang cocok dengan filter ini. Sesuaikan filter tingkat keparahan untuk memperluas pencarian."
+      "filteredTitle": "Tidak ada catatan yang cocok",
+      "filteredDescription": "Pencarian mencakup seluruh riwayat audit. Coba hapus beberapa filter.",
+      "filteredServerDescription": "Tidak ada catatan audit yang cocok dengan filter ini."
     },
     "exportFailed": "Gagal mengekspor log audit",
     "exportTruncated": "Ekspor hanya mencakup {{rows}} entri terbaru. Persempit filter tingkat keparahan untuk mengekspor yang lebih lama.",
