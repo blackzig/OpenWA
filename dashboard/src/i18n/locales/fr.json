@@ -887,6 +887,11 @@
     "subtitle": "Suivez et examinez toutes les actions de l'API et les événements système",
     "exportCsv": "Exporter en CSV",
     "searchPlaceholder": "Rechercher dans les journaux...",
+    "filters": {
+      "sessionId": "ID de session",
+      "from": "Du",
+      "to": "Au"
+    },
     "severity": {
       "all": "Toutes les gravités",
       "info": "Info",
@@ -904,9 +909,9 @@
     "empty": {
       "title": "Aucun journal trouvé",
       "description": "Les journaux d'audit apparaîtront ici au fur et à mesure des actions",
-      "filteredTitle": "Aucune correspondance sur cette page",
-      "filteredDescription": "La recherche ne filtre que la page actuelle. Effacez-la, naviguez entre les pages ou utilisez le filtre de gravité côté serveur.",
-      "filteredServerDescription": "Aucun journal ne correspond à ces filtres. Ajustez le filtre de gravité pour élargir la recherche."
+      "filteredTitle": "Aucun journal correspondant",
+      "filteredDescription": "La recherche parcourt tout l'historique d'audit. Essayez de retirer des filtres.",
+      "filteredServerDescription": "Aucun journal d'audit ne correspond à ces filtres."
     },
     "exportFailed": "Impossible d'exporter le journal d'audit",
     "exportTruncated": "L'export ne couvre que les {{rows}} entrées les plus récentes. Affinez le filtre de gravité pour exporter les plus anciennes.",
