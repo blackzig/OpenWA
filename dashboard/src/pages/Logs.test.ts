@@ -352,7 +352,7 @@ test('a severity filter that matches nothing says no logs exist, not that this p
   await screen.findByText('infra.restart');
   fireEvent.click(screen.getByRole('button', { name: 'Severity, All Severities' }));
   fireEvent.click(screen.getByRole('option', { name: 'Warning' }));
-  await screen.findByText('No logs match these filters. Adjust the severity filter to widen the search.');
+  await screen.findByText('No audit records match these filters.');
   assert.ok(screen.getByRole('heading', { name: 'No logs found' }));
 });
 
@@ -467,6 +467,20 @@ test('CSV export sends the same filters to the API, not only the currently visib
     await screen.findByText('infra.restart');
     fireEvent.change(screen.getByPlaceholderText('Search logs...'), { target: { value: 'stop' } });
     fireEvent.change(screen.getByLabelText('Session ID'), { target: { value: 'sess-1' } });
+    // Aguarda a consulta atualizada antes de exportar.
+    await waitFor(() => {
+      assert.ok(auditRequests.some(url => {
+        const params = new URL(url, 'http://localhost').searchParams;
+        return params.get('limit') === '20'
+          && params.get('search') === 'stop'
+          && params.get('sessionId') === 'sess-1';
+      }), 'filtered list request is not ready');
+      assert.equal(
+        screen.getByRole('button', { name: 'Export CSV' }).hasAttribute('disabled'),
+        false,
+        'export is still disabled',
+      );
+    }, { timeout: 5000 });
     fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => {
       assert.ok(auditRequests.some(url => {
