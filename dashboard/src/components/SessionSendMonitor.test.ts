@@ -54,7 +54,9 @@ test('the monitor does not read messages or send anything until the operator cli
   rows = [row('1', '111@c.us', 'read'), row('2', '222@c.us', 'delivered')];
   total = 2;
   const { container } = rtl.render(createElement(SessionSendMonitor, { sessions: [session] }));
-  await rtl.screen.findByRole('button', { name: 'Consultar envios' });
+  await rtl.waitFor(() => {
+    assert.equal(rtl.screen.getByRole('button', { name: 'Consultar envios' }).hasAttribute('disabled'), false);
+  });
   assert.equal(requests.length, 0, 'a background request was made without the operator asking');
 
   rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Consultar envios' }));
@@ -75,14 +77,20 @@ test('the monitor does not read messages or send anything until the operator cli
 test('a failed history read is an error, not an empty report', async () => {
   failed = true;
   rtl.render(createElement(SessionSendMonitor, { sessions: [session] }));
-  rtl.fireEvent.click(await rtl.screen.findByRole('button', { name: 'Consultar envios' }));
+  await rtl.waitFor(() => {
+    assert.equal(rtl.screen.getByRole('button', { name: 'Consultar envios' }).hasAttribute('disabled'), false);
+  });
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Consultar envios' }));
   assert.ok(await rtl.screen.findByRole('alert'));
   assert.equal(rtl.screen.queryByText('Não há mensagens de saída registradas nesta sessão.'), null);
 });
 
 test('an empty history is displayed explicitly without inventing failures', async () => {
   rtl.render(createElement(SessionSendMonitor, { sessions: [session] }));
-  rtl.fireEvent.click(await rtl.screen.findByRole('button', { name: 'Consultar envios' }));
+  await rtl.waitFor(() => {
+    assert.equal(rtl.screen.getByRole('button', { name: 'Consultar envios' }).hasAttribute('disabled'), false);
+  });
+  rtl.fireEvent.click(rtl.screen.getByRole('button', { name: 'Consultar envios' }));
   assert.ok(await rtl.screen.findByText('Não há mensagens de saída registradas nesta sessão.'));
   assert.equal(requests.length, 1);
 });
