@@ -1,0 +1,81 @@
+.session-send-monitor {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.session-send-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.session-send-heading h2 { margin: 0 0 .3rem; }
+.session-send-heading p,
+.session-send-help { color: var(--text-secondary); font-size: .85rem; }
+.session-send-actions,
+.session-send-controls { display: flex; flex-wrap: wrap; gap: .75rem; }
+.session-send-controls { align-items: end; margin: 1rem 0; }
+.session-send-controls label { display: grid; gap: .35rem; min-width: 200px; }
+.session-send-controls select {
+  min-height: 40px;
+  padding: .5rem;
+  border: 1px solid var(--border);
+  background: var(--bg-white);
+  color: var(--text-primary);
+  border-radius: 7px;
+}
+.session-send-actions button,
+.session-send-controls button {
+  min-height: 40px;
+  padding: .5rem .8rem;
+  background: var(--bg-light);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.session-send-actions button:focus-visible,
+.session-send-controls button:focus-visible,
+.session-send-controls select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.session-send-controls button:disabled { cursor: not-allowed; opacity: .5; }
+.session-send-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: .75rem;
+  margin: 1.25rem 0;
+}
+.session-send-metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  padding: .7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-light);
+}
+.session-send-metrics strong {
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.session-send-metrics span { font-size: .75rem; color: var(--text-secondary); }
+.session-send-error { color: var(--error-text); }
+.session-send-warning { color: var(--warning-text); }
+.session-send-table-scroll { overflow-x: auto; max-height: 360px; overflow-y: auto; }
+.session-send-table-scroll table { border-collapse: collapse; width: 100%; text-align: left; font-size: .85rem; }
+.session-send-table-scroll th,
+.session-send-table-scroll td {
+  border-bottom: 1px solid var(--border);
+  padding: .65rem .75rem;
+  color: var(--text-primary);
+}
+.session-send-table-scroll td code { overflow-wrap: anywhere; white-space: normal; }
+@media (max-width: 650px) {
+  .session-send-monitor { padding: 1rem; }
+  .session-send-controls label,
+  .session-send-controls select { width: 100%; }
+}
