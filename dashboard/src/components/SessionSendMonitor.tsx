@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { messageApi, type ChatMessage, type Session } from '../services/api';
+import { messageApi, type Session } from '../services/api';
 import {
   outgoingMessageCsv, outgoingRecipientCsv, summarizeOutgoing,
   type OutgoingRecord,
