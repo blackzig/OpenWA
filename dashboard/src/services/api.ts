@@ -1317,6 +1317,19 @@ export const auditApi = {
 // =============================================================================
 
 export const messageApi = {
+  /** Read-only, session-wide outgoing history for monitoring (no body/media used by the dashboard).
+   * Uses stable keyset paging so new sends cannot duplicate rows between pages. */
+  listOutgoing: (sessionId: string, limit = 100, after?: string) => {
+    const query = new URLSearchParams({
+      direction: 'outgoing',
+      inlineMedia: 'false',
+      limit: String(limit),
+    });
+    if (after) query.set('after', after);
+    return request<{ messages: ChatMessage[]; total: number }>(
+      '/sessions/' + encodeURIComponent(sessionId) + '/messages?' + query.toString(),
+    );
+  },
   sendText: (sessionId: string, chatId: string, text: string) =>
     request<MessageResponse>(`/sessions/${sessionId}/messages/send-text`, {
       method: 'POST',
